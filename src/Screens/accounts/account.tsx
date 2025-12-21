@@ -16,6 +16,11 @@ import { useAppContext } from "../../Store/contexts/app-context";
 import LoginScreen from "../login screens/login-screen";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Header from "../helpers/header";
+import ReporterList from "../Reporter Screens/ReporterList";
+import HelpScreen from "../help screens/help";
+import PrivacyPolicy from "./PrivacyPolicy";
+import AboutNewsNow from "./AboutNewsNow";
+import { logoutUser } from "../../Store/redux/AuthSlice";
 
 /**
  * Interface for menu item configuration
@@ -89,26 +94,26 @@ const AccountTabs: React.FC<AccountTabsProps> = ({ navigation }) => {
       id: "6", 
       title: "Reporters", 
       icon: "credit-card", 
-      onPress: () => navigation.navigate()
+      onPress: () => navigation.navigate(ReporterList)
       
     },
     { 
       id: "7", 
       title: "Help Center", 
       icon: "headset", 
-      onPress: () => navigation.navigate() 
+      onPress: () => navigation.navigate(HelpScreen) 
     },
     { 
       id: "8", 
       title: "Privacy Policy", 
       icon: "clipboard-list", 
-      onPress: () => navigation.navigate() 
+      onPress: () => navigation.navigate(PrivacyPolicy) 
     },
     { 
       id: "9", 
       title: "About Evya", 
       icon: "info-circle", 
-      onPress: () => navigation.navigate()
+      onPress: () => navigation.navigate(AboutNewsNow)
      
     },
   ];
@@ -129,7 +134,7 @@ const AccountTabs: React.FC<AccountTabsProps> = ({ navigation }) => {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem(ID);
-      dispatch(logout());
+      dispatch(logoutUser());
       await contextLogout();
       
       setTimeout(() => {

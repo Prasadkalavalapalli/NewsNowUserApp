@@ -5,11 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   SafeAreaView,
   StatusBar,
   Linking,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
@@ -18,17 +16,17 @@ import { pallette } from '../helpers/colors';
 import { regular, medium, semibold, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import ToastMessage from '../helpers/ToastMessage';
+import AlertMessage from '../helpers/alertmessage';
 import { userAPI } from '../../Axios/Api';
 import Loader from '../helpers/loader';
 import Header from '../helpers/header';
 
-
 const ReporterDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-//   const { reporterId } = route.params;
-// console.log(reporterId);
-const reporterId=1;
+  const { reporterId } = route.params || {};
+  
+  // State
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [reporter, setReporter] = useState(null);
@@ -39,19 +37,20 @@ const reporterId=1;
     rejectedNews: 0,
   });
   const [toast, setToast] = useState(null);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [showCallAlert, setShowCallAlert] = useState(false);
+  const [showRemoveAlert, setShowRemoveAlert] = useState(false);
 
   // Fetch reporter details
   const fetchReporterDetails = async () => {
     try {
       setLoading(true);
       
-      // Fetch reporter details
       const reporterResponse = await userAPI.getReporterDetails(reporterId);
       
       if (reporterResponse.success) {
         setReporter(reporterResponse.data);
         
-        // Fetch reporter stats
         const statsResponse = await userAPI.getReporterStats(reporterId);
         if (statsResponse.success) {
           setStats(statsResponse.data);
@@ -71,116 +70,128 @@ const reporterId=1;
     }
   };
 
+  // Initial load
   useEffect(() => {
     if (reporterId) {
       fetchReporterDetails();
+    } else {
+      setToast({
+        message: 'Reporter ID is required',
+        type: 'error'
+      });
+      setTimeout(() => navigation.goBack(), 1500);
     }
   }, [reporterId]);
 
+  // Handle refresh
   const handleRefresh = () => {
     setRefreshing(true);
     fetchReporterDetails();
   };
 
-  const handleBackPress = () => {
-    navigation.goBack();
-  };
-
+  // Handle call press
   const handleCallPress = () => {
     if (reporter?.phone) {
-      Alert.alert(
-        'Call Reporter',
-        `Do you want to call ${reporter.phone}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Call',
-            onPress: () => {
-              const phoneUrl = `tel:${reporter.phone}`;
-              Linking.openURL(phoneUrl).catch(() => {
-                setToast({
-                  message: 'Unable to make phone call',
-                  type: 'error'
-                });
-              });
-            },
-          },
-        ]
-      );
+      setShowCallAlert(true);
+    } else {
+      setAlertMessage('Phone number not available');
     }
   };
 
-  const handleEmailPress = () => {
-    if (reporter?.email) {
-      const emailUrl = `mailto:${reporter.email}`;
-      Linking.openURL(emailUrl).catch(() => {
-        setToast({
-          message: 'Unable to open email',
-          type: 'error'
-        });
+  // Confirm phone call
+  const confirmPhoneCall = (confirmed) => {
+    setShowCallAlert(false);
+    if (confirmed && reporter?.phone) {
+      const phoneUrl = `tel:${reporter.phone}`;
+      Linking.openURL(phoneUrl).catch(() => {
+        setAlertMessage('Unable to make phone call');
       });
     }
   };
 
-  const handleRemoveReporter = () => {
-    Alert.alert(
-      'Remove Reporter',
-      'Are you sure you want to remove this reporter? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              const response = await userAPI.deleteReporter(reporterId);
-              
-              if (response.success) {
-                setToast({
-                  message: 'Reporter removed successfully',
-                  type: 'success'
-                });
-                setTimeout(() => {
-                  navigation.goBack();
-                }, 1500);
-              } else {
-                throw new Error(response.message || 'Failed to remove reporter');
-              }
-            } catch (error) {
-              setToast({
-                message: error.message || 'Failed to remove reporter',
-                type: 'error'
-              });
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+  // Handle email press
+  const handleEmailPress = () => {
+    if (reporter?.email) {
+      const emailUrl = `mailto:${reporter.email}`;
+      Linking.openURL(emailUrl).catch(() => {
+        setAlertMessage('Unable to open email app');
+      });
+    } else {
+      setAlertMessage('Email not available');
+    }
   };
 
+  // Handle remove reporter
+  const handleRemoveReporter = () => {
+    if (reporter?.status === 'active') {
+      setAlertMessage('Cannot remove active reporter. Please suspend first.');
+      return;
+    }
+    setShowRemoveAlert(true);
+  };
+
+  // Confirm remove reporter
+  const confirmRemoveReporter = async (confirmed) => {
+    setShowRemoveAlert(false);
+    
+    if (!confirmed) return;
+    
+    try {
+      setLoading(true);
+      const response = await userAPI.deleteReporter(reporterId);
+      
+      if (response.success) {
+        setToast({
+          message: 'Reporter removed successfully',
+          type: 'success'
+        });
+        setTimeout(() => {
+          navigation.goBack();
+        }, 1500);
+      } else {
+        throw new Error(response.message || 'Failed to remove reporter');
+      }
+    } catch (error) {
+      setToast({
+        message: error.message || 'Failed to remove reporter',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle view news by status
   const handleViewNewsByStatus = (status) => {
+    if (!reporter) return;
+    
     navigation.navigate('NewsList', { 
       reporterId,
       status,
-      reporterName: reporter?.name 
+      reporterName: reporter.name 
     });
   };
 
+  // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return 'Invalid date';
+    }
   };
 
+  // Get status color
   const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
+    if (!status) return pallette.grey;
+    
+    switch (status.toLowerCase()) {
       case 'active': return pallette.primary;
       case 'pending': return pallette.gold;
       case 'suspended': return pallette.red;
@@ -188,32 +199,36 @@ const reporterId=1;
     }
   };
 
+  // Get status text
   const getStatusText = (status) => {
     if (!status) return 'Unknown';
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
+  // Render loading state
   if (loading && !refreshing) {
-    return (
-      <Loader/>
-    );
+    return <Loader />;
   }
 
-  if (!reporter) {
+  // Render error state
+  if (!reporterId || !reporter) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-            <Icon name="arrow-left" size={adjust(20)} color={pallette.black} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reporter Details</Text>
-        </View>
-        <View style={styles.centerContainer}>
+        <Header
+          onback={() => navigation.goBack()}
+          active={1}
+          onSkip={() => {}}
+          skippable={false}
+          hastitle={true}
+          title={'Reporter Details'}
+        />
+        
+        <View style={styles.errorContainer}>
           <Icon name="user-slash" size={adjust(60)} color={pallette.lightgrey} />
-          <Text style={styles.emptyText}>Reporter not found</Text>
+          <Text style={styles.errorText}>Reporter not found</Text>
           <TouchableOpacity 
             style={styles.goBackButton}
-            onPress={handleBackPress}
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.goBackText}>Go Back</Text>
           </TouchableOpacity>
@@ -234,7 +249,9 @@ const reporterId=1;
           onClose={() => setToast(null)}
         />
       )}
-  <Header
+      
+      {/* Header */}
+      <Header
         onback={() => navigation.goBack()}
         active={1}
         onSkip={() => {}}
@@ -242,8 +259,6 @@ const reporterId=1;
         hastitle={true}
         title={'Reporter Details'}
       />
-
-     
 
       <ScrollView 
         style={styles.scrollView}
@@ -271,12 +286,14 @@ const reporterId=1;
             </View>
           </View>
           
-          <Text style={styles.reporterName}>{reporter.name}</Text>
-          <Text style={styles.reporterId}>Reporter ID: {reporter.reporterId || reporter._id?.substring(0, 8)}</Text>
+          <Text style={styles.reporterName}>{reporter.name || 'Unnamed Reporter'}</Text>
+          <Text style={styles.reporterId}>
+            ID: {reporter.reporterId || reporter._id?.substring(0, 8) || 'N/A'}
+          </Text>
           
           <View style={styles.contactButtons}>
             <TouchableOpacity 
-              style={styles.contactButton}
+              style={[styles.contactButton, !reporter.phone && styles.disabledButton]}
               onPress={handleCallPress}
               disabled={!reporter.phone}
             >
@@ -285,7 +302,7 @@ const reporterId=1;
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.contactButton}
+              style={[styles.contactButton, !reporter.email && styles.disabledButton]}
               onPress={handleEmailPress}
               disabled={!reporter.email}
             >
@@ -301,23 +318,23 @@ const reporterId=1;
           
           <View style={styles.detailItem}>
             <Icon name="phone" size={16} color={pallette.grey} />
-            <Text style={styles.detailLabel}>Phone:</Text>
+            <Text style={styles.detailLabel}>Phone</Text>
             <Text style={styles.detailValue}>{reporter.phone || 'Not provided'}</Text>
           </View>
           
           <View style={styles.detailItem}>
             <Icon name="envelope" size={16} color={pallette.grey} />
-            <Text style={styles.detailLabel}>Email:</Text>
+            <Text style={styles.detailLabel}>Email</Text>
             <Text style={styles.detailValue}>{reporter.email || 'Not provided'}</Text>
           </View>
           
           <View style={styles.detailItem}>
             <Icon name="location-dot" size={16} color={pallette.grey} />
-            <Text style={styles.detailLabel}>Location:</Text>
+            <Text style={styles.detailLabel}>Location</Text>
             <Text style={styles.detailValue}>
-              {reporter.address || 'Not provided'}
-              {reporter.city && `, ${reporter.city}`}
-              {reporter.state && `, ${reporter.state}`}
+              {[reporter.address, reporter.city, reporter.state]
+                .filter(Boolean)
+                .join(', ') || 'Not provided'}
               {reporter.pincode && ` - ${reporter.pincode}`}
             </Text>
           </View>
@@ -329,23 +346,23 @@ const reporterId=1;
           
           <View style={styles.detailItem}>
             <Icon name="id-card" size={16} color={pallette.grey} />
-            <Text style={styles.detailLabel}>ID Proof:</Text>
+            <Text style={styles.detailLabel}>ID Proof</Text>
             <Text style={styles.detailValue}>
-              {reporter.idProofType ? `${reporter.idProofType.toUpperCase()}: ` : ''}
+              {reporter.idProofType && `${reporter.idProofType.toUpperCase()}: `}
               {reporter.idProofNumber || 'Not provided'}
             </Text>
           </View>
           
           <View style={styles.detailItem}>
             <Icon name="calendar" size={16} color={pallette.grey} />
-            <Text style={styles.detailLabel}>Joined:</Text>
+            <Text style={styles.detailLabel}>Joined</Text>
             <Text style={styles.detailValue}>{formatDate(reporter.createdAt)}</Text>
           </View>
           
           {reporter.experience && (
             <View style={styles.detailItem}>
               <Icon name="briefcase" size={16} color={pallette.grey} />
-              <Text style={styles.detailLabel}>Experience:</Text>
+              <Text style={styles.detailLabel}>Experience</Text>
               <Text style={styles.detailValue}>{reporter.experience} years</Text>
             </View>
           )}
@@ -360,7 +377,7 @@ const reporterId=1;
               style={styles.statCard}
               onPress={() => handleViewNewsByStatus('all')}
             >
-              <Text style={styles.statNumber}>{stats.totalNews}</Text>
+              <Text style={styles.statNumber}>{stats.totalNews || 0}</Text>
               <Text style={styles.statLabel}>Total News</Text>
             </TouchableOpacity>
             
@@ -368,7 +385,7 @@ const reporterId=1;
               style={styles.statCard}
               onPress={() => handleViewNewsByStatus('pending')}
             >
-              <Text style={[styles.statNumber, { color: pallette.gold }]}>{stats.pendingNews}</Text>
+              <Text style={[styles.statNumber, { color: pallette.gold }]}>{stats.pendingNews || 0}</Text>
               <Text style={styles.statLabel}>Pending</Text>
             </TouchableOpacity>
             
@@ -376,7 +393,7 @@ const reporterId=1;
               style={styles.statCard}
               onPress={() => handleViewNewsByStatus('verified')}
             >
-              <Text style={[styles.statNumber, { color: pallette.primary }]}>{stats.verifiedNews}</Text>
+              <Text style={[styles.statNumber, { color: pallette.primary }]}>{stats.verifiedNews || 0}</Text>
               <Text style={styles.statLabel}>Verified</Text>
             </TouchableOpacity>
             
@@ -384,25 +401,51 @@ const reporterId=1;
               style={styles.statCard}
               onPress={() => handleViewNewsByStatus('rejected')}
             >
-              <Text style={[styles.statNumber, { color: pallette.red }]}>{stats.rejectedNews}</Text>
+              <Text style={[styles.statNumber, { color: pallette.red }]}>{stats.rejectedNews || 0}</Text>
               <Text style={styles.statLabel}>Rejected</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Remove Reporter Button */}
+        {/* Action Buttons */}
         <TouchableOpacity 
-          style={styles.removeButton}
+          style={[styles.removeButton, (reporter.status === 'active') && styles.disabledButton]}
           onPress={handleRemoveReporter}
-          disabled={loading}
+          disabled={reporter.status === 'active' || loading}
         >
           <Icon name="trash" size={18} color={pallette.white} />
-          <Text style={styles.removeButtonText}>Remove Reporter</Text>
+          <Text style={styles.removeButtonText}>
+            {reporter.status === 'active' ? 'Cannot Remove Active Reporter' : 'Remove Reporter'}
+          </Text>
         </TouchableOpacity>
 
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Alert Messages */}
+      {alertMessage ? (
+        <AlertMessage
+          message={alertMessage}
+          onClose={() => setAlertMessage('')}
+        />
+      ) : null}
+      
+      {showCallAlert ? (
+        <AlertMessage
+          message={`Do you want to call ${reporter.phone}?`}
+          onClose={confirmPhoneCall}
+          showConfirm={true}
+        />
+      ) : null}
+      
+      {showRemoveAlert ? (
+        <AlertMessage
+          message="Are you sure you want to remove this reporter? This action cannot be undone."
+          onClose={confirmRemoveReporter}
+          showConfirm={true}
+        />
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -411,34 +454,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: pallette.lightgrey,
-    paddingTop:20,
+    paddingTop: 20,
   },
-  centerContainer: {
+  errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: pallette.lightgrey,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: pallette.white,
-    paddingHorizontal: w * 0.04,
-    paddingVertical: h * 0.02,
-    borderBottomWidth: 1,
-    borderBottomColor: pallette.lightgrey,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: adjust(18),
-    fontFamily: bold,
-    color: pallette.black,
-  },
-  headerRight: {
-    width: 28,
+    paddingHorizontal: w * 0.1,
   },
   scrollView: {
     flex: 1,
@@ -500,6 +523,8 @@ const styles = StyleSheet.create({
     fontFamily: bold,
     color: pallette.black,
     marginBottom: h * 0.005,
+    textAlign: 'center',
+    paddingHorizontal: w * 0.1,
   },
   reporterId: {
     fontSize: adjust(14),
@@ -519,6 +544,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     gap: 8,
+  },
+  disabledButton: {
+    backgroundColor: pallette.grey,
+    opacity: 0.6,
   },
   contactButtonText: {
     color: pallette.white,
@@ -553,13 +582,14 @@ const styles = StyleSheet.create({
     fontSize: adjust(14),
     fontFamily: medium,
     color: pallette.grey,
-    width: 70,
+    width: 80,
   },
   detailValue: {
     flex: 1,
     fontSize: adjust(14),
     fontFamily: regular,
     color: pallette.black,
+    flexWrap: 'wrap',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -602,12 +632,13 @@ const styles = StyleSheet.create({
     fontFamily: semibold,
     color: pallette.white,
   },
-  emptyText: {
+  errorText: {
     fontSize: adjust(16),
     fontFamily: medium,
     color: pallette.darkgrey,
     marginTop: h * 0.02,
     marginBottom: h * 0.03,
+    textAlign: 'center',
   },
   goBackButton: {
     backgroundColor: pallette.primary,

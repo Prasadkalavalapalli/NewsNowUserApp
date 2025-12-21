@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Linking,
-  Alert
+  Linking
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { pallette } from "../helpers/colors";
 import { regular, medium, semibold, bold } from "../helpers/fonts";
 import { adjust, h, w } from "../../constants/dimensions";
-import MainHeader from "../helpers/mainheader";
+import Header from "../helpers/header";
+import AlertMessage from "../helpers/alertmessage";  // Import your AlertMessage component
 
 // =============================================================================
 // CONSTANTS
@@ -23,11 +23,11 @@ import MainHeader from "../helpers/mainheader";
  * Company contact information constants
  */
 const COMPANY_CONTACT = {
-  email: "privacy@newsnow.com",
-  phone: "+911234567890",
-  formattedPhone: "+91 123 456 7890",
+  email: "newsnow@gamil.com",
+  phone: "+91 9876543210",
+  formattedPhone: "+91 9876543210",
   website: "https://newsnow.com/privacy",
-  dpoEmail: "dpo@newsnow.com"
+  dpoEmail: "newsnow@gamil.com"
 };
 
 /**
@@ -112,7 +112,21 @@ const PRIVACY_SECTIONS = [
   }
 ];
 
+
 // =============================================================================
+// MAIN COMPONENT: PRIVACY POLICY SCREEN
+// =============================================================================
+
+/**
+ * Privacy Policy Screen - Displays News Now privacy policy with contact options
+ */
+const PrivacyPolicy: React.FC = () => {
+  const navigation = useNavigation();
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const [showPhoneAlert, setShowPhoneAlert] = useState<boolean>(false);
+
+
+//=============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
 
@@ -127,44 +141,11 @@ const handleEmailPress = (email: string): void => {
       if (supported) {
         Linking.openURL(emailUrl);
       } else {
-        Alert.alert("Error", "Email app is not available on this device");
+        setAlertMessage("Email app is not available on this device");
       }
     })
     .catch(() => {
-      Alert.alert("Error", "Failed to open email app");
-    });
-};
-
-/**
- * Initiates phone call to company contact number
- */
-const handlePhonePress = (): void => {
-  const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
-  
-  Linking.canOpenURL(phoneUrl)
-    .then((supported) => {
-      if (supported) {
-        Alert.alert(
-          "Contact News Now",
-          `Do you want to call ${COMPANY_CONTACT.formattedPhone}?`,
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-            {
-              text: "Call",
-              onPress: () => Linking.openURL(phoneUrl),
-            },
-          ],
-          { cancelable: true }
-        );
-      } else {
-        Alert.alert("Error", "Phone calls are not supported on this device");
-      }
-    })
-    .catch(() => {
-      Alert.alert("Error", "Failed to initiate phone call");
+      setAlertMessage("Failed to open email app");
     });
 };
 
@@ -177,11 +158,11 @@ const handleWebsitePress = (): void => {
       if (supported) {
         Linking.openURL(COMPANY_CONTACT.website);
       } else {
-        Alert.alert("Error", "Browser is not available on this device");
+        setAlertMessage("Browser is not available on this device");
       }
     })
     .catch(() => {
-      Alert.alert("Error", "Failed to open website");
+      setAlertMessage("Failed to open website");
     });
 };
 
@@ -249,15 +230,9 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ title, content, bullets
   </View>
 );
 
-// =============================================================================
-// MAIN COMPONENT: PRIVACY POLICY SCREEN
-// =============================================================================
 
-/**
- * Privacy Policy Screen - Displays News Now privacy policy with contact options
- */
-const PrivacyPolicy: React.FC = () => {
-  const navigation = useNavigation();
+
+
 
   /**
    * Handles navigation back to previous screen
@@ -266,10 +241,44 @@ const PrivacyPolicy: React.FC = () => {
     navigation.goBack();
   };
 
+  /**
+   * Initiates phone call to company contact number
+   */
+  const handlePhonePress = (): void => {
+    setShowPhoneAlert(true);
+  };
+
+  /**
+   * Confirms phone call and opens dialer
+   */
+  const confirmPhoneCall = (confirmed: boolean): void => {
+    setShowPhoneAlert(false);
+    if (confirmed) {
+      const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
+      Linking.canOpenURL(phoneUrl)
+        .then((supported) => {
+          if (supported) {
+            Linking.openURL(phoneUrl);
+          } else {
+            setAlertMessage("Phone calls are not supported on this device");
+          }
+        })
+        .catch(() => {
+          setAlertMessage("Failed to initiate phone call");
+        });
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <MainHeader />
+      <Header
+        title="PrivacyPolicy"
+        onback={navigation.goBack}
+        active={1}
+        onSkip={() => {}}
+        skippable={false}
+        hastitle={true}
+      />
       
       {/* Scrollable Content */}
       <ScrollView 
@@ -286,7 +295,6 @@ const PrivacyPolicy: React.FC = () => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.companyName}>News Now</Text>
           <Text style={styles.pageTitle}>Privacy Policy</Text>
           <Text style={styles.lastUpdated}>Last Updated: December 20, 2024</Text>
         </View>
@@ -362,6 +370,18 @@ const PrivacyPolicy: React.FC = () => {
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Alert Messages */}
+      <AlertMessage
+        message={alertMessage}
+        onClose={() => setAlertMessage("")}
+      />
+     
+      <AlertMessage
+        message="Do you want to call our support team?"
+        onClose={confirmPhoneCall}
+        showConfirm={true}
+      />
     </View>
   );
 };
@@ -374,6 +394,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: pallette.lightgrey,
+    paddingTop: 20,
   },
   scrollContent: {
     flex: 1,
@@ -390,28 +411,15 @@ const styles = StyleSheet.create({
     borderBottomColor: pallette.lightgrey,
   },
   logoContainer: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
     borderRadius: 35,
-    backgroundColor: pallette.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: h * 0.015,
-    shadowColor: pallette.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   logo: {
-    width: 40,
-    height: 40,
-  },
-  companyName: {
-    fontSize: adjust(22),
-    color: pallette.black,
-    fontFamily: bold,
-    marginBottom: h * 0.005,
+    width: 80,
+    height: 80,
   },
   pageTitle: {
     fontSize: adjust(18),

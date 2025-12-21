@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Linking,
-  Alert
+  Linking
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { pallette } from "../helpers/colors";
 import { regular, medium, semibold, bold } from "../helpers/fonts";
 import { adjust, h, w } from "../../constants/dimensions";
-import MainHeader from "../helpers/mainheader";
+import Header from "../helpers/header";
+import AlertMessage from "../helpers/alertmessage";
 
 // =============================================================================
 // CONSTANTS
@@ -23,11 +23,12 @@ import MainHeader from "../helpers/mainheader";
  * Company contact information constants
  */
 const COMPANY_CONTACT = {
-  email: "contact@newsnow.com",
-  phone: "+911234567890",
-  website: "https://newsnow.com",
-  formattedPhone: "+91 123 456 7890",
-  address: "News Now Headquarters, Media City, Bangalore - 560001"
+  email: "newsnow@gamil.com",
+  phone: "+91 9876543210",
+  formattedPhone: "+91 9876543210",
+  website: "https://newsnow.com/privacy",
+  dpoEmail: "newsnow@gamil.com",
+  address: "News Now Headquarters, Mumbai, India"
 };
 
 /**
@@ -59,80 +60,6 @@ const FEATURES = [
     description: "News across politics, sports, business, entertainment, and more"
   }
 ];
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-/**
- * Opens email client with pre-filled recipient
- */
-const handleEmailPress = (): void => {
-  const emailUrl = `mailto:${COMPANY_CONTACT.email}`;
-  
-  Linking.canOpenURL(emailUrl)
-    .then((supported) => {
-      if (supported) {
-        Linking.openURL(emailUrl);
-      } else {
-        Alert.alert("Error", "Email app is not available on this device");
-      }
-    })
-    .catch(() => {
-      Alert.alert("Error", "Failed to open email app");
-    });
-};
-
-/**
- * Initiates phone call to company contact number
- */
-const handlePhonePress = (): void => {
-  const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
-  
-  Linking.canOpenURL(phoneUrl)
-    .then((supported) => {
-      if (supported) {
-        // Show confirmation dialog
-        Alert.alert(
-          "Call News Now",
-          `Do you want to call ${COMPANY_CONTACT.formattedPhone}?`,
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-            {
-              text: "Call",
-              onPress: () => Linking.openURL(phoneUrl),
-            },
-          ],
-          { cancelable: true }
-        );
-      } else {
-        Alert.alert("Error", "Phone calls are not supported on this device");
-      }
-    })
-    .catch(() => {
-      Alert.alert("Error", "Failed to initiate phone call");
-    });
-};
-
-/**
- * Opens company website in browser
- */
-const handleWebsitePress = (): void => {
-  Linking.canOpenURL(COMPANY_CONTACT.website)
-    .then((supported) => {
-      if (supported) {
-        Linking.openURL(COMPANY_CONTACT.website);
-      } else {
-        Alert.alert("Error", "Browser is not available on this device");
-      }
-    })
-    .catch(() => {
-      Alert.alert("Error", "Failed to open website");
-    });
-};
 
 // =============================================================================
 // COMPONENT: FEATURE CARD
@@ -221,6 +148,9 @@ const ContactInfoItem: React.FC<ContactInfoItemProps> = ({
  */
 const AboutNewsNow: React.FC = () => {
   const navigation = useNavigation();
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const [showCallAlert, setShowCallAlert] = useState<boolean>(false);
+  const [showWebsiteAlert, setShowWebsiteAlert] = useState<boolean>(false);
 
   /**
    * Handles navigation back to previous screen
@@ -229,10 +159,93 @@ const AboutNewsNow: React.FC = () => {
     navigation.goBack();
   };
 
+  /**
+   * Opens email client with pre-filled recipient
+   */
+  const handleEmailPress = (): void => {
+    const emailUrl = `mailto:${COMPANY_CONTACT.email}`;
+    
+    Linking.canOpenURL(emailUrl)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(emailUrl);
+        } else {
+          setAlertMessage("Email app is not available on this device");
+        }
+      })
+      .catch(() => {
+        setAlertMessage("Failed to open email app");
+      });
+  };
+
+  /**
+   * Initiates phone call to company contact number
+   */
+  const handlePhonePress = (): void => {
+    const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
+    
+    Linking.canOpenURL(phoneUrl)
+      .then((supported) => {
+        if (supported) {
+          setShowCallAlert(true);
+        } else {
+          setAlertMessage("Phone calls are not supported on this device");
+        }
+      })
+      .catch(() => {
+        setAlertMessage("Failed to initiate phone call");
+      });
+  };
+
+  /**
+   * Confirms phone call
+   */
+  const confirmPhoneCall = (confirmed: boolean): void => {
+    setShowCallAlert(false);
+    if (confirmed) {
+      const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
+      Linking.openURL(phoneUrl);
+    }
+  };
+
+  /**
+   * Opens company website in browser
+   */
+  const handleWebsitePress = (): void => {
+    Linking.canOpenURL(COMPANY_CONTACT.website)
+      .then((supported) => {
+        if (supported) {
+          setShowWebsiteAlert(true);
+        } else {
+          setAlertMessage("Browser is not available on this device");
+        }
+      })
+      .catch(() => {
+        setAlertMessage("Failed to open website");
+      });
+  };
+
+  /**
+   * Confirms website opening
+   */
+  const confirmWebsiteOpen = (confirmed: boolean): void => {
+    setShowWebsiteAlert(false);
+    if (confirmed) {
+      Linking.openURL(COMPANY_CONTACT.website);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header Component */}
-      <MainHeader />
+      <Header
+        title="About NewsNow"
+        onback={navigation.goBack}
+        active={1}
+        onSkip={() => {}}
+        skippable={false}
+        hastitle={true}
+      />
       
       {/* Main Content */}
       <ScrollView 
@@ -249,7 +262,6 @@ const AboutNewsNow: React.FC = () => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.channelName}>News Now</Text>
           <Text style={styles.tagline}>Your Trusted Source for Latest News</Text>
         </View>
 
@@ -373,6 +385,30 @@ const AboutNewsNow: React.FC = () => {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Alert Messages */}
+      {alertMessage ? (
+        <AlertMessage
+          message={alertMessage}
+          onClose={() => setAlertMessage("")}
+        />
+      ) : null}
+      
+      {showCallAlert ? (
+        <AlertMessage
+          message={`Do you want to call ${COMPANY_CONTACT.formattedPhone}?`}
+          onClose={confirmPhoneCall}
+          showConfirm={true}
+        />
+      ) : null}
+      
+      {showWebsiteAlert ? (
+        <AlertMessage
+          message="Do you want to visit our website?"
+          onClose={confirmWebsiteOpen}
+          showConfirm={true}
+        />
+      ) : null}
     </View>
   );
 };
@@ -385,6 +421,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: pallette.lightgrey,
+    paddingTop: 20,
   },
   content: {
     flex: 1,
@@ -404,19 +441,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: pallette.primary,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: h * 0.015,
-    shadowColor: pallette.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   logo: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
   },
   channelName: {
     fontSize: adjust(24),

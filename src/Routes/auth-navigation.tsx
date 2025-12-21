@@ -5,6 +5,7 @@ import { useAppContext } from '../Store/contexts/app-context';
 import TabNav from './app-navigation';
 import LoginScreen from '../Screens/login screens/login-screen';
 import Splash from '../Screens/login screens/splash-screen';
+import ReporterRegistration from '../Screens/Reporter Screens/ReporterRegister';
 
 const Stack = createNativeStackNavigator();
 
@@ -13,7 +14,7 @@ const AppNavigator = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Hide splash after 3.5 seconds
+    // Show splash for minimum 1.5 seconds
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 1500);
@@ -21,23 +22,23 @@ const AppNavigator = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Show splash screen for first 3.5 seconds
-  if (showSplash) {
+  // Show splash screen until minimum time AND loading completes
+  if (showSplash || loading) {
     return <Splash />;
-  }
-
-  // After splash, check authentication
-  if (loading) {
-    return <Splash />; // Or a loading indicator
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
+          // User is logged in - show main tabs
           <Stack.Screen name="MainTabs" component={TabNav} />
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          // User is not logged in - show auth screens
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ReporterRegistration" component={ReporterRegistration} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

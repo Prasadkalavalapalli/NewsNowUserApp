@@ -17,6 +17,8 @@ import { h, w, adjust } from '../../constants/dimensions';
 import { userAPI } from '../../Axios/Api';
 import ErrorMessage from '../helpers/errormessage';
 import { pallette } from '../helpers/colors';
+import NewsViewScreen from '../news screen/newsdetail';
+import Loader from '../helpers/loader';
 
 
 const AllNewsScreen = ({ dateFilter }) => {
@@ -69,10 +71,9 @@ const AllNewsScreen = ({ dateFilter }) => {
   };
 
   // Handle news item press
-  const handleNewsPress = (news) => {
-    navigation.navigate('NewsDetail', { 
-      newsId: news._id || news.id,
-      fromScreen: 'all'
+  const handleNewsPress = (id) => {
+    navigation.navigate(NewsViewScreen, { 
+      newsId:id
     });
   };
 
@@ -90,7 +91,7 @@ const AllNewsScreen = ({ dateFilter }) => {
   const renderNewsItem = ({ item, index }) => (
     <TouchableOpacity
       style={styles.newsItem}
-      onPress={() => handleNewsPress(item)}
+      onPress={() => handleNewsPress({id:1})}
       activeOpacity={0.7}
     >
       <View style={styles.newsHeader}>
@@ -110,9 +111,7 @@ const AllNewsScreen = ({ dateFilter }) => {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={pallette.primary} />
-      </View>
+      <Loader/>
     );
   }
 

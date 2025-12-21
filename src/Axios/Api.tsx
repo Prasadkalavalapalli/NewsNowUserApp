@@ -569,5 +569,225 @@ getReporterStats : async (reporterId) => {
     }
   };
 },
+
+getNewsDetails: async (newsId) => {
+  console.log('Fetching complete news details for:', newsId);
+  
+  // Static data with everything in one API call
+  const newsData = {
+    _id: newsId,
+    headline: 'Breaking: Major Tech Conference Announces New AI Innovations',
+    description: `Technology leaders from around the world gathered at the annual Global Tech Summit to unveil groundbreaking advancements in artificial intelligence. The conference featured demonstrations of next-generation AI systems capable of natural language understanding at unprecedented levels.`,
+    images: [
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop',
+    ],
+    video: null,
+    category: 'Technology',
+    categories: ['Technology', 'Business', 'Innovation'],
+    reporter: {
+      _id: '1',
+      name: 'John Smith',
+      email: 'john.smith@example.com',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop'
+    },
+    location: {
+      address: '123 Tech Street',
+      city: 'San Francisco',
+      state: 'California',
+      pincode: '94107',
+      coordinates: { latitude: 37.7749, longitude: -122.4194 }
+    },
+    tags: 'AI, Technology, Innovation, Conference, Future',
+    source: 'TechNews International',
+    isBreakingNews: true,
+    isLiveNews: false,
+    liveStreamUrl: '',
+    createdAt: '2024-12-20T10:30:00Z',
+    updatedAt: '2024-12-20T10:30:00Z',
+    likes: 1245,
+    shares: 342,
+    views: 8923,
+    commentsCount: 4,
+    isLiked: false,
+    isBookmarked: false,
+    shareUrl: `https://newsnow.com/news/${newsId}`,
+    
+    // Include comments directly in the response
+    comments: [
+      {
+        _id: '1',
+        text: 'This is groundbreaking! The future of AI looks promising.',
+        user: {
+          _id: '101',
+          name: 'Alex Johnson',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop'
+        },
+        likes: 24,
+        isOwnComment: false,
+        createdAt: '2024-12-20T11:30:00Z'
+      },
+      {
+        _id: '2',
+        text: 'I attended the conference and it was amazing! The demonstrations were mind-blowing.',
+        user: {
+          _id: '102',
+          name: 'Maria Garcia',
+          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&auto=format&fit=crop'
+        },
+        likes: 18,
+        isOwnComment: true,
+        createdAt: '2024-12-20T12:15:00Z'
+      },
+      {
+        _id: '3',
+        text: 'Finally some focus on ethical AI development. This has been long overdue.',
+        user: {
+          _id: '103',
+          name: 'Robert Chen',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop'
+        },
+        likes: 42,
+        isOwnComment: false,
+        createdAt: '2024-12-20T13:45:00Z'
+      },
+      {
+        _id: '4',
+        text: 'The quantum computing integration announcement is what really excites me!',
+        user: {
+          _id: '104',
+          name: 'Sarah Wilson',
+          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&auto=format&fit=crop'
+        },
+        likes: 15,
+        isOwnComment: false,
+        createdAt: '2024-12-20T14:20:00Z'
+      }
+    ],
+    
+    // Include related news directly in the response
+    relatedNews: [
+      {
+        _id: '101',
+        headline: 'New AI Assistant Surpasses Human Performance in Language Tasks',
+        thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&auto=format&fit=crop',
+        category: 'Technology',
+        createdAt: '2024-12-18T09:15:00Z',
+        views: 5432
+      },
+      {
+        _id: '102',
+        headline: 'Tech Giants Announce Joint Initiative for Open Source AI Development',
+        thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop',
+        category: 'Technology',
+        createdAt: '2024-12-15T14:30:00Z',
+        views: 4210
+      },
+      {
+        _id: '103',
+        headline: 'Ethical AI Guidelines Become Industry Standard',
+        thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=800&auto=format&fit=crop',
+        category: 'Technology',
+        createdAt: '2024-12-12T11:45:00Z',
+        views: 3890
+      },
+      {
+        _id: '104',
+        headline: 'Startup Raises $50M for Quantum Computing Research',
+        thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop',
+        category: 'Technology',
+        createdAt: '2024-12-10T16:20:00Z',
+        views: 3125
+      }
+    ]
+  };
+
+  return {
+    success: true,
+    data: newsData
+  };
+},
+
+// Other API functions remain the same for actions
+toggleLike: async (newsId, liked) => {
+  console.log(`Toggling like for news ${newsId}: ${liked ? 'Like' : 'Unlike'}`);
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: liked ? 'News liked successfully' : 'News unliked successfully'
+  };
+},
+
+toggleBookmark: async (newsId, bookmarked) => {
+  console.log(`Toggling bookmark for news ${newsId}: ${bookmarked ? 'Bookmark' : 'Unbookmark'}`);
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: bookmarked ? 'News bookmarked successfully' : 'News removed from bookmarks'
+  };
+},
+
+addComment: async (newsId, text) => {
+  console.log(`Adding comment to news ${newsId}: ${text.substring(0, 50)}...`);
+  
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  const newComment = {
+    _id: Date.now().toString(),
+    text: text,
+    user: {
+      _id: 'current-user-id',
+      name: 'Current User',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop'
+    },
+    likes: 0,
+    isOwnComment: true,
+    createdAt: new Date().toISOString()
+  };
+  
+  return {
+    success: true,
+    data: newComment,
+    message: 'Comment added successfully'
+  };
+},
+
+deleteComment: async (commentId) => {
+  console.log('Deleting comment:', commentId);
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: 'Comment deleted successfully'
+  };
+},
+
+incrementViewCount: async (newsId) => {
+  console.log('Incrementing view count for news:', newsId);
+  
+  return { success: true };
+},
+
+incrementShareCount: async (newsId) => {
+  console.log('Incrementing share count for news:', newsId);
+  
+  return { success: true };
+},
+
+reportNews: async (newsId, reason) => {
+  console.log(`Reporting news ${newsId} with reason: ${reason}`);
+  
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  return {
+    success: true,
+    message: 'News reported successfully. Our team will review it.'
+  };
+},
 }
 export default api;

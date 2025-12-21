@@ -14,6 +14,13 @@ import AccountTabs from '../Screens/accounts/account';
 import ReporterRegistration from '../Screens/Reporter Screens/ReporterRegister';
 import ReporterList from '../Screens/Reporter Screens/ReporterList';
 import ReporterDetailsScreen from '../Screens/Reporter Screens/ReporterDetailsScreen';
+import NewsDetails from '../Screens/news screen/newsdetail';
+import NewsViewScreen from '../Screens/news screen/newsview';
+import PrivacyPolicy from '../Screens/accounts/PrivacyPolicy';
+import AboutNewsNow from '../Screens/accounts/AboutNewsNow';
+import LoginScreen from '../Screens/login screens/login-screen';
+
+
 
 
 // Define your strings (create a strings file or define here)
@@ -26,12 +33,6 @@ const strings = {
 };
 
 
-
-const UploadScreen = () => (
-  <View style={styles.screen}>
-    <Text style={styles.screenText}>Upload Screen</Text>
-  </View>
-);
 
 const ReporterScreen = () => (
   <View style={styles.screen}>
@@ -51,13 +52,17 @@ const AdminHomeStack = () => (
     <Stack.Screen name="ReporterRegistration" component={ReporterRegistration}/>
     <Stack.Screen name="ReporterList" component={ReporterList}/>
     <Stack.Screen name='ReporterDetailsScreen'component={ReporterDetailsScreen}/>
+      <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
+       <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
         {/* Add more admin screens here */}
   </Stack.Navigator>
 );
 
 const UploadStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="UploadMain" component={UploadScreen} />
+    <Stack.Screen name="NewsViewScreen" component={NewsViewScreen} />
+
+
     {/* Add more upload screens here */}
   </Stack.Navigator>
 );
@@ -65,7 +70,9 @@ const UploadStack = () => (
 const NewsStatusStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="NewsStatusMain" component={NewsDashboard} />
+    <Stack.Screen name="NewsDetails" component={NewsDetails} />
     {/* Add more news status screens here */}
+   
   </Stack.Navigator>
 );
 

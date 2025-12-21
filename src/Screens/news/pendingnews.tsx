@@ -19,6 +19,8 @@ import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import { userAPI } from '../../Axios/Api';
 import ErrorMessage from '../helpers/errormessage';
+import NewsDetails from '../news screen/newsdetail';
+import Loader from '../helpers/loader';
 
 const PendingNewsScreen = ({ dateFilter }) => {
   const navigation = useNavigation();
@@ -71,10 +73,9 @@ const PendingNewsScreen = ({ dateFilter }) => {
   };
 
   // Handle news item press
-  const handleNewsPress = (news) => {
-    navigation.navigate('NewsDetail', { 
-      newsId: news._id || news.id,
-      fromScreen: 'pending'
+  const handleNewsPress = (id) => {
+     navigation.navigate(NewsDetails, { 
+      newsId:id
     });
   };
 
@@ -159,7 +160,7 @@ const handlePhonePress = (phone): void => {
   const renderNewsItem = ({ item }) => (
     <TouchableOpacity
       style={styles.newsCard}
-      onPress={() => handleNewsPress(item)}
+      onPress={() => handleNewsPress({id:1})}
       activeOpacity={0.9}
     >
       {/* News Title */}
@@ -225,9 +226,7 @@ const handlePhonePress = (phone): void => {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={pallette.primary} />
-      </View>
+      <Loader/>
     );
   }
 

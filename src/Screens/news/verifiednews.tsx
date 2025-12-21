@@ -16,6 +16,8 @@ import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import { userAPI } from '../../Axios/Api';
 import ErrorMessage from '../helpers/errormessage';
+import NewsDetails from '../news screen/newsdetail';
+import Loader from '../helpers/loader';
 
 const VerifiedNewsScreen = ({ dateFilter }) => {
   const navigation = useNavigation();
@@ -69,9 +71,8 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
 
   // Handle news item press
   const handleNewsPress = (news) => {
-    navigation.navigate('NewsDetail', { 
-      newsId: news._id || news.id,
-      fromScreen: 'verified'
+     navigation.navigate(NewsDetails, { 
+      newsId:1
     });
   };
 
@@ -171,9 +172,7 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={pallette.primary} />
-      </View>
+      <Loader/>
     );
   }
 

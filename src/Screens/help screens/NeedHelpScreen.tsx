@@ -191,50 +191,7 @@ const NeedHelpPopup: React.FC<Props> = ({ visible, onClose, onSubmit }) => {
                 />
               </View>
 
-              {/* Category Dropdown */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Category</Text>
-                <TouchableOpacity
-                  style={styles.dropdownButton}
-                  onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                >
-                  <Text style={styles.dropdownText}>{getCategoryLabel(category)}</Text>
-                  <Icon 
-                    name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color={pallette.grey} 
-                  />
-                </TouchableOpacity>
-
-                {showCategoryDropdown && (
-                  <View style={styles.dropdownList}>
-                    {categories.map((item) => (
-                      <TouchableOpacity
-                        key={item.value}
-                        style={[
-                          styles.dropdownItem,
-                          category === item.value && styles.dropdownItemSelected
-                        ]}
-                        onPress={() => {
-                          setCategory(item.value);
-                          setShowCategoryDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownItemText,
-                          category === item.value && styles.dropdownItemTextSelected
-                        ]}>
-                          {item.label}
-                        </Text>
-                        {category === item.value && (
-                          <Icon name="checkmark" size={16} color={pallette.primary} />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-
+           
               {/* Description */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Description *</Text>
@@ -295,7 +252,7 @@ const NeedHelpPopup: React.FC<Props> = ({ visible, onClose, onSubmit }) => {
                 </View>
                 <View style={styles.contactInfo}>
                   <Text style={styles.contactLabel}>Email Support</Text>
-                  <Text style={styles.contactText}>support@evya.com</Text>
+                  <Text style={styles.contactText}>newsnow@gamil.com</Text>
                 </View>
               </TouchableOpacity>
             </View>

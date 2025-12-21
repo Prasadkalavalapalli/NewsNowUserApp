@@ -1,4 +1,3 @@
-// screens/ReporterList.jsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,14 +5,10 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   SafeAreaView,
   StatusBar,
-  Modal,
-  Alert,
   ScrollView,
-  Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { useNavigation } from '@react-navigation/native';
@@ -34,8 +29,7 @@ const ReporterList = () => {
   const [reporters, setReporters] = useState([]);
   const [toast, setToast] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedReporter, setSelectedReporter] = useState(null);
-  const [showActionsModal, setShowActionsModal] = useState(false);
+  const [filteredReporters, setFilteredReporters] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -61,13 +55,13 @@ const ReporterList = () => {
         setReporters(reportersData);
         
         // Calculate stats
-        const stats = {
+        const newStats = {
           total: reportersData.length,
           active: reportersData.filter(r => r.status === 'active').length,
           pending: reportersData.filter(r => r.status === 'pending').length,
           suspended: reportersData.filter(r => r.status === 'suspended').length,
         };
-        setStats(stats);
+        setStats(newStats);
       }
     } catch (err) {
       setToast({
@@ -87,17 +81,13 @@ const ReporterList = () => {
 
   // Apply filters when status changes
   useEffect(() => {
-    let filtered = [...reporters];
-    
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(reporter => reporter.status === filterStatus);
+    if (filterStatus === 'all') {
+      setFilteredReporters(reporters);
+    } else {
+      const filtered = reporters.filter(reporter => reporter.status === filterStatus);
+      setFilteredReporters(filtered);
     }
-    
-    setFilteredReporters(filtered);
   }, [filterStatus, reporters]);
-
-  // Filtered reporters based on status
-  const [filteredReporters, setFilteredReporters] = useState([]);
 
   // Handle refresh
   const handleRefresh = () => {
@@ -112,166 +102,7 @@ const ReporterList = () => {
 
   // Handle reporter press
   const handleReporterPress = (reporter) => {
-    console.log(reporter)
-    navigation.navigate(ReporterDetailsScreen,{ reporterId:  reporter.id||1 });
-    // navigation.navigate('ReporterDetail', { reporterId: reporter._id || reporter.id });
-    console.log('Reporter pressed:', reporter.name);
-  };
-
-  // Handle actions press
-  const handleActionsPress = (reporter, event) => {
-    event?.stopPropagation();
-    setSelectedReporter(reporter);
-    setShowActionsModal(true);
-  };
-
-  // Handle approve reporter
-  const handleApproveReporter = async (reporterId) => {
-    try {
-      setLoading(true);
-      
-      const response = await userAPI.approveReporter(reporterId);
-      
-      if (response.success) {
-        setToast({
-          message: 'Reporter approved successfully',
-          type: 'success'
-        });
-        
-        // Update local state
-        setReporters(prev => prev.map(reporter =>
-          reporter._id === reporterId
-            ? { ...reporter, status: 'active' }
-            : reporter
-        ));
-        
-        setShowActionsModal(false);
-      }
-    } catch (error) {
-      setToast({
-        message: 'Failed to approve reporter',
-        type: 'error'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle suspend reporter
-  const handleSuspendReporter = async (reporterId) => {
-    Alert.alert(
-      'Suspend Reporter',
-      'Are you sure you want to suspend this reporter?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Suspend',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              
-              const response = await userAPI.suspendReporter(reporterId);
-              
-              if (response.success) {
-                setToast({
-                  message: 'Reporter suspended successfully',
-                  type: 'success'
-                });
-                
-                // Update local state
-                setReporters(prev => prev.map(reporter =>
-                  reporter._id === reporterId
-                    ? { ...reporter, status: 'suspended' }
-                    : reporter
-                ));
-                
-                setShowActionsModal(false);
-              }
-            } catch (error) {
-              setToast({
-                message: 'Failed to suspend reporter',
-                type: 'error'
-              });
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  // Handle delete reporter
-  const handleDeleteReporter = async (reporterId) => {
-    Alert.alert(
-      'Delete Reporter',
-      'Are you sure you want to delete this reporter?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              
-              const response = await userAPI.deleteReporter(reporterId);
-              
-              if (response.success) {
-                setToast({
-                  message: 'Reporter deleted successfully',
-                  type: 'success'
-                });
-                
-                // Remove from local state
-                setReporters(prev => prev.filter(reporter => reporter._id !== reporterId));
-                
-                setShowActionsModal(false);
-              }
-            } catch (error) {
-              setToast({
-                message: 'Failed to delete reporter',
-                type: 'error'
-              });
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  // Handle call reporter
-  const handleCallReporter = (phoneNumber) => {
-    if (!phoneNumber) {
-      setToast({
-        message: 'Phone number not available',
-        type: 'warning'
-      });
-      return;
-    }
-
-    Alert.alert(
-      'Call Reporter',
-      `Do you want to call ${phoneNumber}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Call',
-          onPress: () => {
-            const phoneUrl = `tel:${phoneNumber}`;
-            Linking.openURL(phoneUrl).catch(() => {
-              setToast({
-                message: 'Unable to make phone call',
-                type: 'error'
-              });
-            });
-          },
-        },
-      ]
-    );
+    navigation.navigate('ReporterDetailsScreen', { reporterId: reporter.id || reporter._id });
   };
 
   // Get status color
@@ -322,12 +153,6 @@ const ReporterList = () => {
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
             <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.moreButton}
-            onPress={(e) => handleActionsPress(item, e)}
-          >
-            <Icon name="ellipsis-vertical" size={16} color={pallette.grey} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -367,9 +192,7 @@ const ReporterList = () => {
   );
 
   if (loading && !refreshing) {
-    return (
-      <Loader/>
-    );
+    return <Loader />;
   }
 
   return (
@@ -387,10 +210,9 @@ const ReporterList = () => {
       <View style={styles.content}>
         <View style={styles.headerSection}>
           <View style={styles.headerTop}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.title}>
-                <Icon name="arrow-left" size={adjust(20)} color={pallette.black} /> Reporters
-              </Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Icon name="arrow-left" size={adjust(20)} color={pallette.black} />
+              <Text style={styles.title}>Reporters</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -407,6 +229,7 @@ const ReporterList = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterContainer}
+          contentContainerStyle={styles.filterContentContainer}
         >
           {filterOptions.map((filter) => (
             <TouchableOpacity
@@ -428,7 +251,7 @@ const ReporterList = () => {
                   filterStatus === filter.id && styles.filterTextActive,
                 ]}
               >
-                {filter.label} ({filter.id === 'all' ? stats.total : stats[filter.id]})
+                {filter.label} ({stats[filter.id]})
               </Text>
             </TouchableOpacity>
           ))}
@@ -437,7 +260,7 @@ const ReporterList = () => {
         <FlatList
           data={filteredReporters}
           renderItem={renderReporterItem}
-          keyExtractor={(item) => item._id || item.id.toString()}
+          keyExtractor={(item) => item.id?.toString() || item._id?.toString() || Math.random().toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -449,120 +272,8 @@ const ReporterList = () => {
             />
           }
           ListEmptyComponent={renderEmptyState}
-          ListHeaderComponent={
-            filteredReporters.length > 0 && (
-              <View style={styles.listHeader}>
-              
-              </View>
-            )
-          }
         />
       </View>
-
-      <Modal
-        visible={showActionsModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowActionsModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowActionsModal(false)}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Reporter Actions</Text>
-              <TouchableOpacity onPress={() => setShowActionsModal(false)}>
-                <Icon name="xmark" size={20} color={pallette.black} />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.modalReporterName}>
-              {selectedReporter?.name}
-            </Text>
-            <Text style={styles.modalReporterEmail}>
-              {selectedReporter?.email}
-            </Text>
-            
-            <View style={styles.modalActions}>
-              {selectedReporter?.status === 'pending' && (
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => handleApproveReporter(selectedReporter._id)}
-                >
-                  <Icon name="circle-check" size={18} color={pallette.primary} />
-                  <Text style={[styles.modalButtonText, { color: pallette.primary }]}>
-                    Approve Reporter
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              {selectedReporter?.status === 'active' && (
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => handleSuspendReporter(selectedReporter._id)}
-                >
-                  <Icon name="user-slash" size={18} color={pallette.gold} />
-                  <Text style={[styles.modalButtonText, { color: pallette.gold }]}>
-                    Suspend Reporter
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              {selectedReporter?.status === 'suspended' && (
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => handleApproveReporter(selectedReporter._id)}
-                >
-                  <Icon name="user-check" size={18} color={pallette.primary} />
-                  <Text style={[styles.modalButtonText, { color: pallette.primary }]}>
-                    Reactivate Reporter
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              {selectedReporter?.phone && (
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => {
-                    setShowActionsModal(false);
-                    handleCallReporter(selectedReporter.phone);
-                  }}
-                >
-                  <Icon name="phone" size={18} color={pallette.l1} />
-                  <Text style={[styles.modalButtonText, { color: pallette.l1 }]}>
-                    Call Reporter
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => {
-                  setShowActionsModal(false);
-                  handleReporterPress(selectedReporter);
-                }}
-              >
-                <Icon name="eye" size={18} color={pallette.grey} />
-                <Text style={[styles.modalButtonText, { color: pallette.grey }]}>
-                  View Details
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.deleteButton]}
-                onPress={() => handleDeleteReporter(selectedReporter._id)}
-              >
-                <Icon name="trash" size={18} color={pallette.red} />
-                <Text style={[styles.modalButtonText, { color: pallette.red }]}>
-                  Delete Reporter
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -572,11 +283,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: pallette.lightgrey,
     paddingTop: 20,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -592,12 +298,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: h * 0.01,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontSize: adjust(18),
     fontFamily: bold,
     color: pallette.black,
+    marginLeft: 10,
   },
   addReporterButton: {
     flexDirection: 'row',
@@ -615,17 +325,19 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     backgroundColor: pallette.white,
-    paddingHorizontal: 3,
-    paddingVertical: 2,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: pallette.lightgrey,
+  },
+  filterContentContainer: {
+    paddingHorizontal: w * 0.04,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: pallette.lightgrey,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 20,
     marginRight: 10,
     gap: 6,
@@ -645,14 +357,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: w * 0.04,
     paddingTop: h * 0.015,
     paddingBottom: h * 0.02,
-  },
-  listHeader: {
-    marginBottom: h * 0.015,
-  },
-  listHeaderTitle: {
-    fontSize: adjust(14),
-    fontFamily: medium,
-    color: pallette.grey,
+    flexGrow: 1,
   },
   reporterCard: {
     backgroundColor: pallette.white,
@@ -711,7 +416,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    marginBottom: h * 0.01,
   },
   statusText: {
     fontSize: adjust(10),
@@ -719,15 +423,11 @@ const styles = StyleSheet.create({
     color: pallette.white,
     textTransform: 'uppercase',
   },
-  moreButton: {
-    padding: 4,
-  },
   contactInfo: {
     flexDirection: 'row',
-    marginBottom: h * 0.015,
-    paddingBottom: h * 0.01,
-    borderBottomWidth: 1,
-    borderBottomColor: pallette.lightgrey,
+    paddingTop: h * 0.01,
+    borderTopWidth: 1,
+    borderTopColor: pallette.lightgrey,
   },
   contactItem: {
     flexDirection: 'row',
@@ -741,8 +441,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: h * 0.15,
   },
@@ -759,6 +457,7 @@ const styles = StyleSheet.create({
     color: pallette.grey,
     textAlign: 'center',
     marginBottom: h * 0.03,
+    paddingHorizontal: w * 0.1,
   },
   addButton: {
     flexDirection: 'row',
@@ -768,58 +467,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: pallette.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: w * 0.04,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: h * 0.015,
-  },
-  modalTitle: {
-    fontSize: adjust(18),
-    fontFamily: bold,
-    color: pallette.black,
-  },
-  modalReporterName: {
-    fontSize: adjust(16),
-    fontFamily: semibold,
-    color: pallette.black,
-    marginBottom: h * 0.005,
-  },
-  modalReporterEmail: {
-    fontSize: adjust(14),
-    fontFamily: regular,
-    color: pallette.grey,
-    marginBottom: h * 0.02,
-  },
-  modalActions: {
-    paddingTop: h * 0.01,
-  },
-  modalButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: h * 0.015,
-    borderBottomWidth: 1,
-    borderBottomColor: pallette.lightgrey,
-    gap: 12,
-  },
-  deleteButton: {
-    borderBottomWidth: 0,
-  },
-  modalButtonText: {
-    fontSize: adjust(15),
-    fontFamily: medium,
   },
 });
 
