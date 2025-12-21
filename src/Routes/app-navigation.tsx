@@ -1,0 +1,190 @@
+import React, { useContext } from 'react';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAppContext } from '../Store/contexts/app-context';
+import { pallette } from '../Screens/helpers/colors';
+import { h, w } from '../constants/dimensions';
+import { medium } from '../Screens/helpers/fonts';
+import HomeScreen from '../Screens/home screens/home';
+import NewsDashboard from '../Screens/news/NewsDashboard';
+import HelpScreen from '../Screens/help screens/help';
+import AccountTabs from '../Screens/accounts/account';
+import ReporterRegistration from '../Screens/Reporter Screens/ReporterRegister';
+import ReporterList from '../Screens/Reporter Screens/ReporterList';
+import ReporterDetailsScreen from '../Screens/Reporter Screens/ReporterDetailsScreen';
+
+
+// Define your strings (create a strings file or define here)
+const strings = {
+  AdminHome: 'Admin Home',
+  upload: 'Upload',
+  NewsStatus: 'News Status',
+  ReporterHome: 'Reporter Home',
+  home: 'Home',
+};
+
+
+
+const UploadScreen = () => (
+  <View style={styles.screen}>
+    <Text style={styles.screenText}>Upload Screen</Text>
+  </View>
+);
+
+const ReporterScreen = () => (
+  <View style={styles.screen}>
+    <Text style={styles.screenText}>Reporter Screen</Text>
+  </View>
+);
+
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+// Stack Navigators for each tab
+const AdminHomeStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="HelpScreen" component={HelpScreen} />
+    <Stack.Screen name="AccountTabs" component={AccountTabs} />
+    <Stack.Screen name="ReporterRegistration" component={ReporterRegistration}/>
+    <Stack.Screen name="ReporterList" component={ReporterList}/>
+    <Stack.Screen name='ReporterDetailsScreen'component={ReporterDetailsScreen}/>
+        {/* Add more admin screens here */}
+  </Stack.Navigator>
+);
+
+const UploadStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="UploadMain" component={UploadScreen} />
+    {/* Add more upload screens here */}
+  </Stack.Navigator>
+);
+
+const NewsStatusStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="NewsStatusMain" component={NewsDashboard} />
+    {/* Add more news status screens here */}
+  </Stack.Navigator>
+);
+
+const ReporterHomeStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ReporterMain" component={ReporterScreen} />
+    {/* Add more reporter screens here */}
+  </Stack.Navigator>
+);
+
+// Main Tab Navigator
+const TabNav = () => {
+  const { user } = useAppContext();
+
+  // Define tabs based on user role (example)
+  const userTabs = [
+    {
+      name: strings.AdminHome,
+      component: AdminHomeStack,
+      title: strings.AdminHome,
+      activeIcon: 'home',
+      inactiveIcon: 'home-outline',
+      show: user?.role === 'admin' || user?.role === 'user', // Control visibility
+    },
+    {
+      name: strings.upload,
+      component: UploadStack,
+      title: strings.upload,
+      activeIcon: 'cloud-upload',
+      inactiveIcon: 'cloud-upload-outline',
+      show: user?.role === 'reporter' || user?.role === 'admin',
+    },
+    {
+      name: strings.NewsStatus,
+      component: NewsStatusStack,
+      title: strings.NewsStatus,
+      activeIcon: 'newspaper-variant',
+      inactiveIcon: 'newspaper-variant-outline',
+      show: true, // Show for all users
+    },
+    {
+      name: strings.ReporterHome,
+      component: ReporterHomeStack,
+      title: strings.ReporterHome,
+      activeIcon: 'account-circle',
+      inactiveIcon: 'account-circle-outline',
+      show: user?.role === 'reporter',
+    },
+  ];
+
+  // Filter tabs based on user role and visibility
+  const filteredTabs = userTabs.filter(tab => tab.show);
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          height: h * 0.08,
+          elevation: 0,
+          borderTopWidth: 0,
+          backgroundColor: pallette.white,
+        },
+        tabBarHideOnKeyboard: true,
+      }}
+    >
+      {filteredTabs.map((tab) => (
+        <Tab.Screen
+          key={tab.name}
+          name={tab.name}
+          component={tab.component}
+          options={{
+            unmountOnBlur: true,
+            tabBarIcon: ({ focused }) => (
+              <Icon
+                name={focused ? tab.activeIcon : tab.inactiveIcon}
+                size={26}
+                color={focused ? pallette.primary : pallette.grey}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <Text
+                style={[
+                  styles.label,
+                  { color: focused ? pallette.primary : pallette.grey },
+                ]}>
+                {tab.title}
+              </Text>
+            ),
+            tabBarButton: props => (
+              <Pressable 
+                {...props} 
+                android_ripple={{ color: 'transparent' }} 
+              />
+            ),
+          }}
+        />
+      ))}
+    </Tab.Navigator>
+  );
+};
+
+export default TabNav;
+
+const styles = StyleSheet.create({
+  label: {
+    fontSize: 12,
+    fontFamily: medium,
+    marginBottom: 4,
+  },
+  screen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: pallette.white,
+  },
+  screenText: {
+    fontSize: 20,
+    fontFamily: medium,
+    color: pallette.black,
+  },
+});
