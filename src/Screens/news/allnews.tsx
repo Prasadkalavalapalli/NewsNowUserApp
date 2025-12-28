@@ -14,11 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 
 import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
-import { userAPI } from '../../Axios/Api';
+import apiService from '../../Axios/Api';
 import ErrorMessage from '../helpers/errormessage';
 import { pallette } from '../helpers/colors';
-import NewsViewScreen from '../news screen/newsdetail';
 import Loader from '../helpers/loader';
+import { useAppContext } from '../../Store/contexts/app-context';
+import NewsDetails from '../news screen/newsdetail';
 
 
 const AllNewsScreen = ({ dateFilter }) => {
@@ -27,38 +28,55 @@ const AllNewsScreen = ({ dateFilter }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [newsList, setNewsList] = useState([]);
   const [error, setError] = useState(null);
-
+ const {user}=useAppContext();
   // Fetch all news
-  const fetchAllNews = async () => {
-    try {
-      setError(null);
-      
-      const params = {
-        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-        page: 1,
-        limit: 20,
-      };
-
-      console.log('Fetching all news:', params);
-      
-      const response = await userAPI.getAllNews(params);
-      
-      if (response.success) {
-        setNewsList(response.data.news || response.data || []);
-      } else {
-        throw new Error(response.message || 'Failed to fetch news');
-      }
-    } catch (err) {
-      console.error('Fetch all news error:', err);
-      setError(err.message || 'Failed to load news');
-      setNewsList([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+ const fetchAllNews = async () => {
+  try {
+    setError(null);
+    
+    // Use correct user ID property
+    const userId = user?.userId || user?.id || user?.UserId;
+    
+    if (!userId) {
+      throw new Error('User ID not found');
     }
-  };
+    
+    const params = {
+      userId: userId,
+      ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
+      ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
+      page: 1,
+      limit: 20,
+    };
 
+    console.log('Fetching all news with params:', params);
+    
+    const response = await apiService.getAllNews(params);
+    console.log('Raw API Response:', response);
+    
+    // Handle raw response (if API service returns axios response directly)
+    if (response.data) {
+      const apiData = response.data;
+      
+      // Check if API returned error
+      if (response.error === false ) {
+        const newsData = apiData.data?.news || apiData.data || apiData.news || apiData || [];
+        setNewsList(Array.isArray(newsData) ? newsData : []);
+      } else {
+        throw new Error(response.message || 'API returned error');
+      }
+    } else {
+      throw new Error('Invalid API response');
+    }
+  } catch (err) {
+    console.error('Fetch all news error:', err);
+    setError(err.message || 'Failed to load news');
+    setNewsList([]);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
   // Initial load and when date filter changes
   useEffect(() => {
     fetchAllNews();
@@ -71,11 +89,10 @@ const AllNewsScreen = ({ dateFilter }) => {
   };
 
   // Handle news item press
-  const handleNewsPress = (id) => {
-    navigation.navigate(NewsViewScreen, { 
-      newsId:id
-    });
-  };
+ const handleNewsPress = (id) => {
+  console.log(id);
+   navigation.navigate('NewsDetails', { newsId: id });
+};
 
   // Format time
   const formatTime = (dateString) => {
@@ -91,19 +108,19 @@ const AllNewsScreen = ({ dateFilter }) => {
   const renderNewsItem = ({ item, index }) => (
     <TouchableOpacity
       style={styles.newsItem}
-      onPress={() => handleNewsPress({id:1})}
+      onPress={() => handleNewsPress(item.newsId)}
       activeOpacity={0.7}
     >
       <View style={styles.newsHeader}>
         <Text style={styles.newsTitle} numberOfLines={1}>
-          {item.title}
+          {item.headline}
         </Text>
         <Text style={styles.newsTime}>
-          {formatTime(item.createdAt || item.date)}
+          {formatTime(item.createdAt || item.date)||'--'}
         </Text>
       </View>
-      <Text style={styles.newsDescription} numberOfLines={2}>
-        {item.description || 'No description available'}
+      <Text style={styles.newsDescription} numberOfLines={3}>
+        {item.content|| 'No description available'}
       </Text>
       {index < newsList.length - 1 && <View style={styles.separator} />}
     </TouchableOpacity>
@@ -120,7 +137,7 @@ const AllNewsScreen = ({ dateFilter }) => {
       <FlatList
         data={newsList}
         renderItem={renderNewsItem}
-        keyExtractor={(item) => item._id || item.id.toString()}
+        keyExtractor={(item) => item.newsId || item.newsId.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={

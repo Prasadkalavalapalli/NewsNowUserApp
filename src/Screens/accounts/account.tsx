@@ -1,147 +1,109 @@
-import React, { useEffect } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CommonActions } from "@react-navigation/native";
-import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from "@react-navigation/native";
 
-import { w } from "../../constants/dimensions";
-import { pallette } from "../helpers/colors";
-
-// import { getUserDetails, logout } from '../../redux/AuthSlice';
-// import { useAppContext } from '../../contexts/app-context';
-import { ID } from '../../constants/dimensions';
-import { useAppContext } from "../../Store/contexts/app-context";
-import LoginScreen from "../login screens/login-screen";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Header from "../helpers/header";
-import ReporterList from "../Reporter Screens/ReporterList";
-import HelpScreen from "../help screens/help";
-import PrivacyPolicy from "./PrivacyPolicy";
-import AboutNewsNow from "./AboutNewsNow";
+import { useAppContext } from "../../Store/contexts/app-context";
 import { logoutUser } from "../../Store/redux/AuthSlice";
-
-/**
- * Interface for menu item configuration
- */
-interface MenuItem {
-  id: string;
-  title: string;
-  icon: string;
-  onPress: () => void;
-  gap?: boolean;
-}
-
-/**
- * Interface for component props
- */
-interface AccountTabsProps {
-  navigation: any;
-}
+import { pallette } from "../helpers/colors";
+import apiService from '../../Axios/Api';
+import LoginScreen from "../login screens/login-screen";
 
 /**
  * Account Tabs Component
  * 
- * Displays user profile information and navigation menu for account-related features
- * including bookings, vehicles, address, profile, and settings.
+ * Displays user account information and navigation menu
  */
-const AccountTabs: React.FC<AccountTabsProps> = ({ navigation }) => {
-  const dispatch = useDispatch();
-  const { logout: contextLogout,user } = useAppContext();
-  // Get user data from Redux store
- 
-  // const { contextState } = useAppContext();
-  const userId  =user?.id;
+const AccountTabs: React.FC = () => {
+  const navigation = useNavigation();
+  const { user, logout } = useAppContext();
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  /**
+   * Fetch user details on component mount
+   */
+  useEffect(() => {
+    fetchUserDetails();
+  }, []);
+
+  const fetchUserDetails = async () => {
+    try {
+      if (!user.userId) return;
+      
+      const response = await apiService.getUserById(user.userId);
+      
+      if (response.error === false) {
+        setUserData(response.data);
+      } else {
+        console.error('Failed to fetch user details:', response.message);
+      }
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /**
    * Navigation menu items configuration
    */
-  const menuItems: MenuItem[] = [
-    // { 
-    //   id: "1", 
-    //   title: "My Bookings", 
-    //   icon: "calendar-check", 
-    //   onPress: () => navigation.navigate()
-    // },
-    // { 
-    //   id: "2", 
-    //   title: "Favourite Stations", 
-    //   icon: "heart", 
-    //   onPress: () =>nav(navigation, strings.favstations) ,  
-     
-    // },
-    // { 
-    //   id: "3", 
-    //   title: "My Vehicles", 
-    //   icon: "car-alt", 
-    //   onPress: () => nav(navigation, strings.devices) 
-    // },
-    // { 
-    //   id: "4", 
-    //   title: "My Address", 
-    //   icon: "map-marker-alt", 
-    //   onPress: () => nav(navigation, strings.address)
-    // },
-    // { 
-    //   id: "5", 
-    //   title: "Profile", 
-    //   icon: "user-alt", 
-    //   onPress: () => nav(navigation, strings.profile, { from: 'account' }) 
-    // },
+  const menuItems = [
     { 
-      id: "6", 
+      id: "1", 
       title: "Reporters", 
-      icon: "credit-card", 
-      onPress: () => navigation.navigate(ReporterList)
-      
+      icon: "users", 
+      onPress: () => navigation.navigate('ReporterList'),
+      show: user?.role?.toLowerCase() === 'admin'
     },
     { 
-      id: "7", 
+      id: "2", 
       title: "Help Center", 
       icon: "headset", 
-      onPress: () => navigation.navigate(HelpScreen) 
+      onPress: () => navigation.navigate('HelpScreen'),
+      show: true
     },
     { 
-      id: "8", 
+      id: "3", 
       title: "Privacy Policy", 
       icon: "clipboard-list", 
-      onPress: () => navigation.navigate(PrivacyPolicy) 
+      onPress: () => navigation.navigate('PrivacyPolicy'),
+      show: true
     },
     { 
-      id: "9", 
-      title: "About Evya", 
+      id: "4", 
+      title: "About NewsNow", 
       icon: "info-circle", 
-      onPress: () => navigation.navigate(AboutNewsNow)
-     
+      onPress: () => navigation.navigate('AboutNewsNow'),
+      show: true
     },
   ];
 
   /**
-   * Fetch user details when component mounts or userId changes
-   */
-  useEffect(() => {
-    if (userId && (!user || Object.keys(user).length === 0)) {
-      // dispatch(getUserDetails(userId));
-    }
-  }, [userId, user, dispatch]);
-
-  /**
    * Handle user logout process
-   * Clears storage, resets state, and navigates to landing page
    */
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem(ID);
-      dispatch(logoutUser());
-      await contextLogout();
+      // Clear AsyncStorage if needed
+      // await AsyncStorage.clear();
       
-      setTimeout(() => {
-        navigation.navigate(LoginScreen)
-      }, 100);
+      // Call context logout
+      logout();
+      
+      // Dispatch Redux logout if using Redux
+      // dispatch(logoutUser());
+      
+      // Navigate to login
+      navigation.navigate(LoginScreen);
       
     } catch (error) {
-        navigation.navigate(LoginScreen);
+      console.error('Logout error:', error);
+      // Still navigate to login even if error
+      navigation.navigate(LoginScreen);
     }
   };
 
@@ -149,156 +111,163 @@ const AccountTabs: React.FC<AccountTabsProps> = ({ navigation }) => {
    * Get display data for user profile section
    */
   const getDisplayData = () => {
-    if (!user) {
-      return { username: "Guest User", mobileNumber: "" };
+    if (loading) {
+      return { username: "Loading...", phoneNumber: "" };
     }
-
-    const username = user.username || user.name || "Guest User";
-    const mobileNumber = user.mobileNumber || user.phone || user.email||'';
-
-    return { username, mobileNumber };
+    
+    if (userData) {
+      return {
+        username: userData.name || userData.username || "Guest User",
+        phoneNumber: userData.mobileNumber || userData.phone || ""
+      };
+    }
+    
+    return { username: "Guest User", phoneNumber: "" };
   };
 
-  const { username, mobileNumber } = getDisplayData();
+  const { username, phoneNumber } = getDisplayData();
 
   return (
-
-     <View style={styles.container}>
-       <Header 
-          title="Account"
-          onback={navigation.goBack}
-          active={1}
-          onSkip={() => {}}
-          skippable={false}
-          hastitle={true}
-        />
-    {/* <View style={styles.container}> */}
+    <View style={styles.container}>
+      <Header 
+        title="Account"
+        onback={() => navigation.goBack()}
+        hastitle={true}
+        active={1}
+        onSkip={() => {}}
+        skippable={false}
+      />
+      
       {/* Profile Section */}
       <TouchableOpacity 
         style={styles.profileSection} 
-        onPress={() =>navigation.navigate()}
+        onPress={() => navigation.navigate('ProfileScreen')}
+        activeOpacity={0.7}
       >
-        <View style={styles.profileImage}> 
-           <Icon name="account-circle" size={82} color={pallette.primary}   />
+        <View style={styles.profileImage}>
+          <Icon 
+            name="account-circle" 
+            size={70} 
+            color={pallette.primary} 
+          />
         </View>
-       
-        {/* <Image 
-          source={require('../../assets/images/account/avatar.png')} 
-          style={styles.profileImage} 
-        /> */}
+        
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{username}</Text>
-          <Text style={styles.phoneNumber}>
-            {mobileNumber ? `+91 ${mobileNumber}` : "Add phone number"}
+          <Text style={styles.userName} numberOfLines={1}>
+            {username}
+          </Text>
+          <Text style={styles.phoneNumber} numberOfLines={1}>
+            {phoneNumber ? `+91 ${phoneNumber}` : "No phone number"}
           </Text>
         </View>
+        
         <Ionicons name="chevron-forward" size={20} color="#999" />
       </TouchableOpacity>
 
       {/* Navigation Menu List */}
-     <View style={styles.menuList}>
-  {menuItems.map((item) => {
-    // Hide 'Reporters' menu item if user is reporter
-   if ((user?.role === 'reporter' || user?.role === 'user') && item.title === 'Reporters') {
-  return null;
-}
-    
-    return (
-      <TouchableOpacity 
-        key={item.id} 
-        style={[
-          styles.menuItem, 
-          { marginBottom: item.gap ? 20 : 8 }
-        ]} 
-        onPress={item.onPress}
-      >
-        <FontAwesome5 
-          name={item.icon} 
-          size={18} 
-          color="#444" 
-          style={styles.menuIcon} 
-        />
-        <Text style={styles.menuText}>{item.title}</Text>
-        <Ionicons name="chevron-forward" size={18} color="#999" />
-      </TouchableOpacity>
-    );
-  })}
-</View>
+      <View style={styles.menuList}>
+        {menuItems
+          .filter(item => item.show)
+          .map((item) => (
+            <TouchableOpacity 
+              key={item.id} 
+              style={styles.menuItem} 
+              onPress={item.onPress}
+              activeOpacity={0.7}
+            >
+              <FontAwesome5 
+                name={item.icon} 
+                size={18} 
+                color={pallette.primary}
+                style={styles.menuIcon} 
+              />
+              <Text style={styles.menuText}>{item.title}</Text>
+              <Ionicons name="chevron-forward" size={18} color="#999" />
+            </TouchableOpacity>
+          ))
+        }
+      </View>
 
       {/* Logout Button */}
-      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-        <Ionicons name="log-out-outline" size={18} color="#D9534F" />
+      <TouchableOpacity 
+        onPress={handleLogout} 
+        style={styles.logoutButton}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="log-out-outline" size={22} color={pallette.red} />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-// Styles kept exactly the same as original
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingBottom:10,
+    backgroundColor: pallette.white,
     paddingTop:20,
+    paddingHorizontal:10
   },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 14,
+    backgroundColor: pallette.white,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: pallette.lightgrey,
   },
   profileImage: {
-    width: w * 0.2,
-    height: w * 0.2,
-    borderRadius: 25,
     marginRight: 12,
   },
   profileInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
+    color: pallette.black,
+    marginBottom: 4,
   },
   phoneNumber: {
     fontSize: 14,
-    color: "#666",
+    color: pallette.grey,
   },
   menuList: {
-    marginTop: 12,
+    paddingVertical: 8,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    // backgroundColor: pallette.lightgrey,
-    padding: 14,
-    marginBottom: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: pallette.lightgrey,
   },
   menuIcon: {
     width: 24,
-    textAlign: "center",
-    marginRight: 12,
+    marginRight: 16,
   },
   menuText: {
     flex: 1,
-    color: '#000',
     fontSize: 16,
+    color: pallette.black,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: w * 0.04,
+    justifyContent: "center",
+    backgroundColor: pallette.lightred,
+    marginHorizontal: 20,
+    marginTop: 'auto',  // This pushes it to the bottom
+    marginBottom: 30,   // Add some space from bottom
+    paddingVertical: 14,
     borderRadius: 8,
-    marginTop: 8,
+    gap: 8,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#D9534F",
-    marginLeft: 6,
+    color: pallette.red,
   },
 });
 

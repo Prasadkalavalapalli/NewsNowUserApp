@@ -2,11 +2,9 @@ import React, { createContext, useState, useEffect, ReactNode, useContext } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
-  id: string;
-  name?: string;
-  email?: string;
+  id: number;
   token?: string;
-  role?: 'admin' | 'reporter' | 'user'; // Add role for navigation control
+  role?: string;
 }
 
 interface AppContextType {

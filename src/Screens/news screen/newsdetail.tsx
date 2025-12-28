@@ -24,7 +24,7 @@ import { regular, medium, semibold, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import ToastMessage from '../helpers/ToastMessage';
 import AlertMessage from '../helpers/alertmessage';
-import { userAPI } from '../../Axios/Api';
+import apiService from '../../Axios/Api';
 import Loader from '../helpers/loader';
 import Header from '../helpers/header';
 
@@ -33,8 +33,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const NewsDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { newsId = 1 } = route.params || {};
-  
+ 
+const { newsId } = route.params || {};
+console.log(newsId);
   // Refs
   const commentInputRef = useRef();
   
@@ -66,17 +67,17 @@ const NewsDetails = () => {
     try {
       setLoading(true);
       
-      const response = await userAPI.getNewsDetails(newsId);
+      const response = await apiService.getNewsById(newsId);
       
-      if (response.success) {
+      if (response.error===false) {
         const newsData = response.data;
         setNews(newsData);
         setLiked(newsData.isLiked || false);
         setBookmarked(newsData.isBookmarked || false);
-        setLikesCount(newsData.likes || 0);
-        setCommentsCount(newsData.commentsCount || 0);
-        setSharesCount(newsData.shares || 0);
-        setViewsCount(newsData.views || 0);
+        setLikesCount(newsData.likeCount|| 0);
+        setCommentsCount(newsData.commentCount || 0);
+        setSharesCount(newsData.shareCount || 0);
+        setViewsCount(newsData.saveCount|| 0);
         setComments(newsData.comments || []);
         setRelatedNews(newsData.relatedNews || []);
         
@@ -427,7 +428,7 @@ const NewsDetails = () => {
           size={22} 
           color={bookmarked ? pallette.primary : pallette.grey} 
         />
-        <Text style={styles.actionButtonText}>Save</Text>
+        <Text style={styles.actionButtonText}>{formatNumber(viewsCount)}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -475,9 +476,9 @@ const NewsDetails = () => {
           </Text>
         </View>
         <View>
-          <Text style={styles.reporterName}>{news.reporter?.name || 'Staff Reporter'}</Text>
+          <Text style={styles.reporterName}>{news.reporterName|| 'Staff Reporter'}</Text>
           <Text style={styles.newsMeta}>
-            {formatDate(news.createdAt)} • {news.location?.city || 'Unknown Location'}
+            {formatDate(news.uploadedAt)} • {news.city || 'Unknown Location'}
           </Text>
         </View>
       </View>
@@ -561,12 +562,12 @@ const NewsDetails = () => {
         <View style={styles.newsContent}>
          
          {/* News Type Badges */}
-          {(news.isBreakingNews || news.isLiveNews) && (
+          {(news || news.isLiveNews) && (
             <View style={styles.newsTypeBadges}>
-              {news.isBreakingNews && (
+              {news && (
                 <View style={styles.breakingBadge}>
                   <Icon name="bolt" size={12} color={pallette.white} />
-                  <Text style={styles.breakingText}>BREAKING</Text>
+                  <Text style={styles.breakingText}>{news.category}</Text>
                 </View>
               )}
               {news.isLiveNews && (
@@ -586,7 +587,8 @@ const NewsDetails = () => {
           <NewsImages />
           
           {/* Description */}
-          <Text style={styles.description}>{news.description}</Text>
+          <Text style={styles.description}>{news.content}</Text>
+          
           
           {/* Tags */}
           {news.tags && (
@@ -607,7 +609,7 @@ const NewsDetails = () => {
           {news.source && (
             <View style={styles.sourceContainer}>
               <Text style={styles.sourceLabel}>Source:</Text>
-              <Text style={styles.sourceText}>{news.source}</Text>
+              <Text style={styles.sourceText}>{news.reporterEmail}</Text>
             </View>
           )}
 

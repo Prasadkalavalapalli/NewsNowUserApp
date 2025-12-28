@@ -21,6 +21,7 @@ import AboutNewsNow from '../Screens/accounts/AboutNewsNow';
 import LoginScreen from '../Screens/login screens/login-screen';
 import EditPendingNews from '../Screens/news/EditPendingNews';
 import UploadScreen from '../Screens/news/UploadScreen';
+import ProfileScreen from '../Screens/accounts/profile-screen';
 
 
 
@@ -57,6 +58,7 @@ const AdminHomeStack = () => (
     <Stack.Screen name='ReporterDetailsScreen'component={ReporterDetailsScreen}/>
       <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
        <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
+       <Stack.Screen name='ProfileScreen'component={ProfileScreen}/>
        
         {/* Add more admin screens here */}
   </Stack.Navigator>
@@ -70,6 +72,12 @@ const UploadStack = () => (
 
    <Stack.Screen name="HelpScreen" component={HelpScreen} />
     <Stack.Screen name="AccountTabs" component={AccountTabs} />
+    <Stack.Screen name="ReporterRegistration" component={ReporterRegistration}/>
+    <Stack.Screen name="ReporterList" component={ReporterList}/>
+    <Stack.Screen name='ReporterDetailsScreen'component={ReporterDetailsScreen}/>
+      <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
+       <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
+       <Stack.Screen name='ProfileScreen'component={ProfileScreen}/>
     {/* Add more upload screens here */}
   </Stack.Navigator>
 );

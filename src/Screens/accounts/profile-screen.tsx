@@ -1,37 +1,33 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Image,
   TouchableOpacity,
   StyleSheet,
-  TextInputProps,
-  ActivityIndicator,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-
-import {h, w,adjust} from '../../constants/dimensions';
-import {regular, semibold} from '../helpers/fonts';
-import { pallette } from "../helpers/colors";
-import { useNavigation } from "@react-navigation/native";
-import Header from "../helpers/header";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
-import AlertMessage from "../helpers/alertmessage";
-
-import { userAPI } from "../../Axios/Api";
-import Loader from "../helpers/loader";
+import Header from "../helpers/header";
 import { useAppContext } from '../../Store/contexts/app-context';
+import apiService from '../../Axios/Api';
+import { adjust } from '../../constants/dimensions';
+import { regular, semibold } from '../helpers/fonts';
+import { pallette } from "../helpers/colors";
+import Loader from '../helpers/loader';
 
-/**
- * Input field component for form inputs
- */
-interface InputProps extends TextInputProps {
+// Input field component
+interface InputProps {
   label: string;
   value: string;
   placeholder?: string;
   onValueChange: (val: string) => void;
+  editable?: boolean;
+  keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  maxLength?: number;
 }
 
 const InputField: React.FC<InputProps> = ({
@@ -39,288 +35,342 @@ const InputField: React.FC<InputProps> = ({
   value,
   placeholder,
   onValueChange,
-  ...props
+  editable = true,
+  keyboardType = 'default',
+  maxLength,
 }) => (
   <View style={styles.inputContainer}>
     <Text style={styles.label}>{label}</Text>
     <TextInput
       placeholder={placeholder || label}
       placeholderTextColor={pallette.grey}
-      style={styles.input}
+      style={[styles.input, !editable && styles.disabledInput]}
       value={value}
       onChangeText={onValueChange}
-      {...props}
+      editable={editable}
+      keyboardType={keyboardType}
+      maxLength={maxLength}
+      autoCapitalize="none"
+      autoCorrect={false}
     />
   </View>
 );
 
-/**
- * Profile Screen Component
- * 
- * Handles both user registration and profile editing with form validation
- * and API integration for creating or updating user profiles.
- */
-const ProfileScreen: React.FC = ({navigation, route}: any) => {
-  const isEditMode = route?.params?.from === 'account';
-  const { mobileNumber: routeMobileNumber } = route.params || {};
-  const {user} =useAppContext();
-  const dispatch = useDispatch();
-const userId=user?.id;
-  const [username, setUsername] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [mobile, setMobile] = useState<string>('');
+// Profile Screen Component (Edit only)
+const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const { user } = useAppContext();
+  
+  // State
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    mobile: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
-  /**
-   * Initialize form data based on mode (edit vs register)
-   */
+  // Fetch user details on mount
   useEffect(() => {
-    if (isEditMode && user) {
-      setUsername(user.name || '');
-      setEmail(user.email || '');
-      if (user.mobileNumber) {
-        setMobile(`+91 ${user.mobileNumber}`);
-      } else if (user.phone) {
-        setMobile(`+91 ${user.phone}`);
+    fetchUserDetails();
+  }, []);
+
+  const fetchUserDetails = async () => {
+    if (!user.userId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'User not found',
+      });
+      return;
+    }
+    
+    try {
+      setFetching(true);
+      const response = await apiService.getUserById(user.userId);
+      
+      if (response.error === false) {
+        const userData = response.data;
+        setFormData({
+          username: userData.name || '',
+          email: userData.email || '',
+          mobile: userData.mobileNumber 
+            ? `${userData.mobileNumber}` 
+            : userData.phone 
+              ? `${userData.phone}` 
+              : '',
+        });
       } else {
-        setMobile('');
+        throw new Error(response.message || 'Failed to fetch profile');
       }
-    } else {
-      const actualMobileNumber = routeMobileNumber || reduxMobileNumber;
-      if (actualMobileNumber) {
-        setMobile(`+91 ${actualMobileNumber}`);
-      }
+    } catch (error: any) {
+      console.error('Fetch user error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to load profile',
+      });
+    } finally {
+      setFetching(false);
     }
-  }, [user, routeMobileNumber, reduxMobileNumber, isEditMode]);
+  };
 
-  /**
-   * Fetch user details when in edit mode
-   */
-  useEffect(() => {
-    if (isEditMode && userId) {
-      dispatch(getUserDetails(userId));
-    }
-  }, [userId, isEditMode, dispatch]);
-
-  /**
-   * Show error toast when there's an error
-   */
-  useEffect(() => {
-    if (error) {
-      Toast.show({type: 'error', text1: error});
-    }
-  }, [error]);
-
-  /**
-   * Validate email format
-   */
-  const validateEmail = (email: string) => {
-    const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
+  // Email validation
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  /**
-   * Validate all form inputs
-   */
-  const validateInputs = () => {
-    if (!username || username.length < 3) {
-      return 'Please enter a valid username (min 3 characters)';
+  // Form validation
+  const validateForm = (): string | null => {
+    const { username, email, mobile } = formData;
+    
+    if (!username.trim() || username.length < 3) {
+      return 'Please enter a valid name (min 3 characters)';
     }
-    if (!email || !validateEmail(email)) {
-      return 'Please enter a valid email';
+    
+    if (!email.trim() || !validateEmail(email)) {
+      return 'Please enter a valid email address';
     }
-    if (!mobile || mobile.replace(/\D/g, '').length !== 12) {
-      return 'Enter a valid 10-digit mobile number';
+    
+    const cleanMobile = mobile.replace(/\D/g, '');
+    if (mobile && cleanMobile.length < 10) {
+      return 'Please enter a valid 10-digit mobile number';
     }
+    
     return null;
   };
 
-  /**
-   * Handle registration or profile update
-   */
-  const handleRegister = () => {
-    const validationError = validateInputs();
+  // Handle profile update
+  const handleUpdateProfile = async () => {
+    const validationError = validateForm();
     if (validationError) {
-      Toast.show({type: 'error', text1: validationError});
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: validationError,
+      });
       return;
     }
 
-    const cleanMobileNumber = mobile.replace('+91', '').replace(/\s/g, '').trim();
+    if (!user?.id) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'User ID not available',
+      });
+      return;
+    }
 
-    if (isEditMode) {
-      if (!userId) {
-        Toast.show({type: 'error', text1: 'User ID not available for update'});
-        return;
+    setLoading(true);
+    try {
+      // Format mobile number (remove +91 if present)
+      const cleanMobile = formData.mobile.replace(/\D/g, '').slice(-10);
+      
+      const updateData = {
+        userId: user.id,
+        name: formData.username.trim(),
+        email: formData.email.trim().toLowerCase(),
+        mobileNumber: cleanMobile || null,
+      };
+
+      // Call update profile API
+      const response = await apiService.updateUserProfile(updateData);
+      
+      if (response.error === false) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: response.message || 'Profile updated successfully!',
+        });
+        
+        // Navigate back after delay
+        setTimeout(() => {
+          navigation.goBack();
+        }, 1500);
+      } else {
+        throw new Error(response.message || 'Update failed');
       }
-
-      const profileData = {
-        userId: userId,
-        username: username.trim(),
-        email: email.trim().toLowerCase(),
-        mobileNumber: cleanMobileNumber,
-      };
-
-      dispatch(updateProfile(profileData))
-        .unwrap()
-        .then((response: any) => {
-          dispatch(getUserDetails(userId));
-          Toast.show({type: 'success', text1: 'Profile updated successfully!'});
-           setTimeout(() => {
-              navigation.goBack();
-            }, 2000);
-        })
-        .catch((err: any) => {
-          Toast.show({type: 'error', text1: err?.message || 'Profile update failed'});
-        });
-    } else {
-      const registerData = {
-        username: username.trim(),
-        email: email.trim().toLowerCase(),
-        mobileNumber: cleanMobileNumber,
-        deviceDetails: {},
-      };
-
-      dispatch(registerUser(registerData))
-        .unwrap()
-        .then((response: any) => {
-          if (response.success) {
-            Toast.show({type: 'success', text1: 'Registration successful!'});
-            if (response.data?.userId) {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Home' }],
-              });
-            } else {
-               setTimeout(() => {
-              navigation.navigate('Login');
-            }, 2000); 
-            }
-          } else {
-            throw new Error(response || 'Registration failed');
-          }
-        })
-        .catch((err: any) => {
-          Toast.show({type: 'error', text1: err || 'Registration failed. Please try again.'});
-        });
+    } catch (error: any) {
+      console.error('Update error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to update profile',
+      });
+    } finally {
+      setLoading(false);h
     }
   };
 
-  /**
-   * Handle back button press
-   */
+  // Update form field
+  const updateField = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Handle back press
   const handleBackPress = () => {
     navigation.goBack();
   };
 
+  if (fetching) {
+    return (
+      <Loader/>
+    );
+  }
+
   return (
-    <ScrollView>
+    <ScrollView 
+      style={styles.scrollView}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <Header
         onback={handleBackPress}
+        hastitle={true}
+        title={' Profile'}
         active={1}
         onSkip={() => {}}
         skippable={false}
-        hastitle={true}
-        title={isEditMode ? 'Edit Profile' : 'Registration'}
       />
+      
       <View style={styles.container}>
+        {/* Profile Avatar */}
         <View style={styles.avatarContainer}>
-          <Image
-            source={require('../../assets/images/account/avatar.png')}
-            style={styles.avatar}
+          <Icon 
+            name="account-circle" 
+            size={100} 
+            color={pallette.primary} 
           />
-          <TouchableOpacity style={styles.editAvatar}>
-            <Image
-              source={require('../../assets/images/account/camera.png')}
-              style={styles.cameraIcon}
-            />
-          </TouchableOpacity>
         </View>
 
+        {/* Form Fields */}
         <InputField
-          label="Username"
-          value={username}
-          onValueChange={setUsername}
-          placeholder="Enter username"
-          autoCapitalize="none"
-          autoCorrect={false}
+          label="Name"
+          value={formData.username}
+          onValueChange={(val) => updateField('username', val)}
+          placeholder="Enter your name"
+          editable={false}
         />
         
         <InputField
           label="Email"
-          value={email}
-          onValueChange={setEmail}
+          value={formData.email}
+          onValueChange={(val) => updateField('email', val)}
+          placeholder="Enter your email"
           keyboardType="email-address"
-          placeholder="Enter email"
-          autoCapitalize="none"
-          autoCorrect={false}
+          editable={false}
         />
         
-        <InputField style={{color: pallette.grey,fontFamily: semibold,}}
-          label="Mobile"
-          value={mobile}
-          onValueChange={setMobile}
-          placeholder="+91 Enter Phone Number"
+        <InputField
+          label="Mobile Number"
+          value={formData.mobile}
+          onValueChange={(val) => updateField('mobile', val)}
+          placeholder="Enter phone number"
           keyboardType="phone-pad"
-          maxLength={14}
-          editable={!isEditMode}
+          maxLength={10}
+          editable={false}
         />
 
-        <TouchableOpacity
-          onPress={handleRegister}
-          disabled={loading}
+        {/* Update Button */}
+        {/* <TouchableOpacity
           style={[
-            styles.otpButton, 
-            {backgroundColor: loading ? pallette.mediumgrey : pallette.primary}
-          ]}>
+            styles.submitButton,
+            loading && styles.submitButtonDisabled
+          ]}
+          onPress={handleUpdateProfile}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
           {loading ? (
             <ActivityIndicator color={pallette.white} size="small" />
           ) : (
-            <Text style={styles.otpButtonText}>
-              {isEditMode ? 'Update Profile' : 'Register'}
+            <Text style={styles.submitButtonText}>
+              Update Profile
             </Text>
           )}
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
+      
       <Toast position="top" visibilityTime={3000} />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {padding: 20},
-  title: {fontSize: adjust(30), color: pallette.black, fontFamily: semibold},
-  avatarContainer: {alignItems: 'center', marginVertical: 20},
-  avatar: {width: 100, height: 100, borderRadius: 50},
-  editAvatar: {position: 'absolute', bottom: -(h * 0.005), left: w * 0.5},
-  cameraIcon: {height: h * 0.05, width: w * 0.06, resizeMode: 'contain'},
-  inputContainer: {marginVertical: h * 0.015},
-  label: {
-    color: pallette.black,
-    fontSize: adjust(12),
-    fontFamily: semibold,
-    marginBottom: 5,
+  scrollView: {
+    flex: 1,
+    backgroundColor: pallette.white,
+    paddingTop: 20,
   },
-  input: {
-    height: h * 0.06,
-    paddingVertical: h * 0.01,
-    paddingHorizontal: w * 0.04,
-    borderRadius: w * 0.04,
-    color: pallette.black,
-    fontSize: adjust(14),
-    fontFamily: regular,
-    borderColor: pallette.primary,
-    backgroundColor: pallette.lightgrey,
-  },
-  otpButton: {
-    height: h * 0.065,
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: w * 0.04,
-    marginVertical: h * 0.02,
+    backgroundColor: pallette.white,
   },
-  otpButtonText: {
-    color: pallette.white,
-    fontSize: adjust(12),
+  loadingText: {
+    marginTop: 12,
+    fontSize: adjust(14),
+    color: pallette.grey,
     fontFamily: regular,
+  },
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    color: pallette.black,
+    fontSize: adjust(14),
+    fontFamily: semibold,
+    marginBottom: 8,
+  },
+  input: {
+    height: 50,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    color: pallette.black,
+    fontSize: adjust(16),
+    fontFamily: regular,
+    borderWidth: 1,
+    borderColor: pallette.lightgrey,
+    backgroundColor: pallette.white,
+  },
+  disabledInput: {
+    backgroundColor: pallette.lightgrey,
+    color: pallette.grey,
+  },
+  submitButton: {
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: pallette.primary,
+    marginTop: 20,
+    elevation: 3,
+    shadowColor: pallette.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: pallette.mediumgrey,
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    color: pallette.white,
+    fontSize: adjust(16),
+    fontFamily: semibold,
   },
 });
 

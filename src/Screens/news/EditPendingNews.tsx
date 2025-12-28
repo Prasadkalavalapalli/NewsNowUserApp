@@ -12,8 +12,8 @@ import Video from 'react-native-video';
 import ToastMessage from '../helpers/ToastMessage';
 
 import { pallette } from '../helpers/colors';
-import { userAPI } from '../../Axios/Api';
 import CustomDropdown from '../helpers/DropdownItem';
+import Header from '../helpers/header';
 
 const newsTypeOptions = [
   { label: 'Local News', value: 'LOCAL' },
@@ -28,8 +28,8 @@ const categoryOptions = [
 const EditPendingNews = ({ route, navigation }) => {
   const { mode, news } = route.params;
 
-  const [headline, setHeadline] = useState(news.title);
-  const [content, setContent] = useState(news.description);
+  const [headline, setHeadline] = useState(news.headline);
+  const [content, setContent] = useState(news.content);
   const [newsType, setNewsType] = useState(news.newsType);
   const [category, setCategory] = useState(
     news.category || news.categories?.[0] || ''
@@ -64,9 +64,18 @@ const EditPendingNews = ({ route, navigation }) => {
   return (
     <ScrollView style={styles.container}>
 
+
       {/* Page Title */}
       <Text style={styles.pageTitle}>
-        {mode === 'APPROVE' ? 'Edit & Approve News' : 'Edit & Reject News'}
+         <Header
+        onback={() => navigation.goBack()}
+        hastitle={true}
+        title={mode === 'APPROVE' ? 'Edit & Approve News' : 'Edit & Reject News'}
+        active={1}
+        onSkip={() => {}}
+        skippable={false}
+      />
+        
       </Text>
 
       {/* ================= MEDIA ================= */}

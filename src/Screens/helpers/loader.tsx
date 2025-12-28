@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: pallette.white,
+    // backgroundColor: pallette.white,
   },
   loaderContainer: {
     width: 120,

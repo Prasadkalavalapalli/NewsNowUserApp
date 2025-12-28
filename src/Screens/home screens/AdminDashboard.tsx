@@ -29,7 +29,7 @@ const { user } = useAppContext();
   console.log(user);
   const fetchData = async () => {
     try {
-      const data = await apiService.getDashboardStats({userId:2,roleId:1});
+      const data = await apiService.getDashboardStats({userId:user.userId,roleId:1});
       setStats(data.data);
       console.log(data)
     } catch (err) {

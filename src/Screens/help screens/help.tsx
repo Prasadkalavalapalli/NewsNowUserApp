@@ -44,7 +44,7 @@ interface Ticket {
 const HelpScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAppContext();
-  
+ 
   // State
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
@@ -57,7 +57,7 @@ const HelpScreen: React.FC = () => {
   const fetchTickets = useCallback(async () => {
     try {
       if (!refreshing) setLoading(true);
-       const res = await apiService.getAllTickets(user?.id);
+       const res = await apiService.getAllTickets(user.userId);
    
       if (res.error === false) {
         setTickets(res.data || []);
@@ -75,7 +75,7 @@ const HelpScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id, refreshing]);
+  }, [user.userId, refreshing]);
 
   useEffect(() => {
     fetchTickets();
@@ -102,7 +102,7 @@ const HelpScreen: React.FC = () => {
     try {
       setLoading(true);
       const res = await apiService.createTicket({
-        userId: user?.id,
+        userId: user.userId,
         title: ticketData.issue,
         description: ticketData.comment,
         email: ticketData.email
@@ -135,7 +135,7 @@ const HelpScreen: React.FC = () => {
   const handleUpdateTicketStatus = async (ticket: Ticket) => {
     try {
       const res = await apiService.updateTicketStatus({
-        userId: user?.id,
+        userId: user.userId,
         ticketId: ticket.id,
         status: 'RESOLVED'
       });
@@ -230,7 +230,7 @@ const HelpScreen: React.FC = () => {
 
   // Render ticket item
   const renderTicket = ({ item }: { item: Ticket }) => {
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role?.toLocaleLowerCase() === 'admin';
     const isResolvedOrClosed = ['resolved', 'closed'].includes(item.status.toLowerCase());
     const showActions = isAdmin && !isResolvedOrClosed;
 

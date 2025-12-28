@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==================== AXIOS CONFIGURATION ====================
 const apiClient = axios.create({
-  baseURL: 'https://86698f19265d.ngrok-free.app/api/',
+  baseURL: ' https://530c7fc00442.ngrok-free.app/api/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -163,9 +163,9 @@ export const apiService = {
     }
   },
 
-  getAllNews: async (userId, filters = {}) => {
+  getAllNews: async (params) => {
+    console.log('parameters  =====   ',params  )
     try {
-      const params = { userId, ...filters };
       const response = await apiClient.get('/admin/news', { params });
       return response;
     } catch (error) {
@@ -176,6 +176,7 @@ export const apiService = {
   getNewsById: async (newsId) => {
     try {
       const response = await apiClient.get(`/admin/news/${newsId}`);
+      console.log(response);
       return response;
     } catch (error) {
       return error;
@@ -246,6 +247,7 @@ export const apiService = {
   getUserById: async (userId) => {
     try {
       const response = await apiClient.get(`/users/${userId}`);
+      console.log(response)
       return response;
     } catch (error) {
       return error;

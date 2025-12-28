@@ -17,11 +17,12 @@ import { useNavigation } from '@react-navigation/native';
 import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
-import { userAPI } from '../../Axios/Api';
 import ErrorMessage from '../helpers/errormessage';
 import NewsDetails from '../news screen/newsdetail';
 import Loader from '../helpers/loader';
 import { useAppContext } from '../../Store/contexts/app-context';
+import Toast from 'react-native-toast-message';
+import apiService from '../../Axios/Api';
 
 const PendingNewsScreen = ({ dateFilter }) => {
   const navigation = useNavigation();
@@ -32,36 +33,58 @@ const PendingNewsScreen = ({ dateFilter }) => {
 const { user } = useAppContext();
   // Fetch pending news
   const fetchPendingNews = async () => {
-    try {
-      setError(null);
-      
-      const params = {
-        status: 'pending',
-        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-        page: 1,
-        limit: 20,
-      };
-
-      console.log('Fetching pending news:', params);
-      
-      const response = await userAPI.getPendingNews(params);
-      
-      if (response.success) {
-        setPendingNews(response.data.news || response.data || []);
-      } else {
-        throw new Error(response.message || 'Failed to fetch pending news');
-      }
-    } catch (err) {
-      console.error('Fetch pending news error:', err);
-      setError(err.message || 'Failed to load pending news');
-      setPendingNews([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  try {
+    setError(null);
+    
+    // Get user ID from context/app state
+    const userId = user?.id || user?.userId; // Adjust based on your user object
+    
+    if (!userId) {
+      throw new Error('User ID not found');
     }
-  };
+    
+    // Build parameters according to your API endpoint
+    const params = {
+      userId: userId,
+      status: 'PENDING',
+      ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
+      ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
+      page: 1,
+      limit: 20,
+    };
 
+    
+    console.log('Fetching pending news with params:', params);
+    
+    // Assuming userAPI.getPendingNews is already defined
+    const response = await  apiService.getAllNews(params);
+    console.log('API Response:', response);
+    
+    // Check response structure - adjust based on your actual API response
+    if (response.error === false) {
+      // Access data correctly
+      const newsData = response.data?.news || response.data?.data || response.data || [];
+      setPendingNews(Array.isArray(newsData) ? newsData : []);
+    } else {
+      throw new Error(response.message || 'Failed to fetch pending news');
+    }
+  } catch (err) {
+    console.error('Fetch pending news error:', err);
+    setError(err.message || 'Failed to load pending news');
+    setPendingNews([]);
+    
+    // Show error toast if needed
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: err.message || 'Failed to load news',
+    });
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
+  
   // Initial load and when date filter changes
   useEffect(() => {
     fetchPendingNews();
@@ -75,9 +98,7 @@ const { user } = useAppContext();
 
   // Handle news item press
   const handleNewsPress = (id) => {
-     navigation.navigate(NewsDetails, { 
-      newsId:id
-    });
+    navigation.navigate('NewsDetails', { newsId: id });
   };
 
   // Handle approve/reject actions
@@ -152,17 +173,17 @@ const handlePhonePress = (phone): void => {
   const renderNewsItem = ({ item }) => (
     <TouchableOpacity
       style={styles.newsCard}
-      onPress={() => handleNewsPress({id:1})}
+      onPress={() => handleNewsPress(item.newsId)}
       activeOpacity={0.9}
     >
       {/* News Title */}
       <Text style={styles.newsTitle} numberOfLines={1}>
-        {item.title}
+        {item.headline}
       </Text>
 
       {/* News Description */}
       <Text style={styles.newsDescription} numberOfLines={2}>
-        {item.description || 'No description available'}
+        {item.content|| 'No description available'}
       </Text>
 
       {/* Upload Info and Views */}
@@ -170,27 +191,27 @@ const handlePhonePress = (phone): void => {
         <View style={styles.uploadInfo}>
           <Icon name="clock" size={adjust(12)} color={pallette.grey} />
           <Text style={styles.uploadText}>
-            uploaded {getTimeAgo(item.createdAt || item.updatedAt)}
+            uploaded {getTimeAgo(item.createdAt || item.uploadedAt)}
           </Text>
         </View>
         <View style={styles.viewsInfo}>
           <Icon name="person" size={adjust(12)} color={pallette.grey} />
           <Text style={styles.viewsText}>
-            {item.reporter.name || 0} 
+            {item.reporterName || 0} 
           </Text>
         </View>
       </View>
 
       {/* Categories */}
       {renderCategories(item.categories || item.tags)}
-       {user?.role==='admin'?<View>
+       {user?.role?.toLocaleLowerCase()==='admin'?<View>
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
         <TouchableOpacity
         
           style={[styles.actionButton,{ borderColor: `{pallette.primary}` }]}
-          onPress={(e) => handlePhonePress(item.reporter.phone||8688113655)}
+          onPress={(e) => handlePhonePress(item.reporterPhone||8688113655)}
           activeOpacity={0.7}
         >
           <Text style={styles.approveButtonText}><Icon name="phone" size={adjust(12)} color={pallette.primary} /></Text>
@@ -234,7 +255,7 @@ const handlePhonePress = (phone): void => {
       <FlatList
         data={pendingNews}
         renderItem={renderNewsItem}
-        keyExtractor={(item) => item._id || item.id.toString()}
+        keyExtractor={(item) => item.newsId || item.newsId.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={

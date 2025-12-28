@@ -14,10 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
-import { userAPI } from '../../Axios/Api';
 import ErrorMessage from '../helpers/errormessage';
 import NewsDetails from '../news screen/newsdetail';
 import Loader from '../helpers/loader';
+import Toast from 'react-native-toast-message';
+import { useAppContext } from '../../Store/contexts/app-context';
+import apiService from '../../Axios/Api';
 
 const VerifiedNewsScreen = ({ dateFilter }) => {
   const navigation = useNavigation();
@@ -25,25 +27,35 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [verifiedNews, setVerifiedNews] = useState([]);
   const [error, setError] = useState(null);
-
+ const {user}=useAppContext();
   // Fetch verified news
   const fetchVerifiedNews = async () => {
     try {
       setError(null);
-      
-      const params = {
-        status: 'verified',
-        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-        page: 1,
-        limit: 20,
-      };
-
+    
+    // Get user ID from context/app state
+    const userId = user?.id || user?.userId; // Adjust based on your user object
+    
+    if (!userId) {
+      throw new Error('User ID not found');
+    }
+    
+    // Build parameters according to your API endpoint
+    const params = {
+      userId: userId,
+      status: 'PUBLISHED',
+      ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
+      ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
+      page: 1,
+      limit: 20,
+    };
       console.log('Fetching verified news:', params);
       
-      const response = await userAPI.getVerifiedNews(params);
-      
-      if (response.success) {
+     const response = await apiService.getAllNews(params);
+         console.log('API Response:', response);
+         
+         // Check response structure - adjust based on your actual API response
+         if (response.error === false) {
         setVerifiedNews(response.data.news || response.data || []);
       } else {
         throw new Error(response.message || 'Failed to fetch verified news');
@@ -52,6 +64,11 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       console.error('Fetch verified news error:', err);
       setError(err.message || 'Failed to load verified news');
       setVerifiedNews([]);
+       Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: err.message || 'Failed to load news',
+          });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -70,10 +87,8 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
   };
 
   // Handle news item press
-  const handleNewsPress = (news) => {
-     navigation.navigate(NewsDetails, { 
-      newsId:1
-    });
+  const handleNewsPress = (id) => {
+     navigation.navigate('NewsDetails', { newsId: id });
   };
 
   // Get time period label
@@ -115,28 +130,28 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
         <View style={styles.statItem}>
           <Icon name="comment" size={adjust(14)} color={pallette.grey} />
           {/* <Text style={styles.statLabel}>Replies</Text> */}
-          <Text style={styles.statValue}>{formatNumber(item.replies || 45)}</Text>
+          <Text style={styles.statValue}>{formatNumber(item.commentCount || 0)}</Text>
         </View>
         
         {/* Views */}
         <View style={styles.statItem}>
           <Icon name="eye" size={adjust(14)} color={pallette.grey} />
           {/* <Text style={styles.statLabel}>Views</Text> */}
-          <Text style={styles.statValue}>{formatNumber(item.views || 34)}</Text>
+          <Text style={styles.statValue}>{formatNumber(item.saveCount || 0)}</Text>
         </View>
         
         {/* Reads */}
         <View style={styles.statItem}>
           <Icon name="heart" size={adjust(14)} color={pallette.grey} />
           {/* <Text style={styles.statLabel}>Reads</Text> */}
-          <Text style={styles.statValue}>{formatNumber(item.reads || 15)}</Text>
+          <Text style={styles.statValue}>{formatNumber(item.likeCount|| 0)}</Text>
         </View>
         
         {/* Shares */}
         <View style={styles.statItem}>
           <Icon name="share-nodes" size={adjust(14)} color={pallette.grey} />
           {/* <Text style={styles.statLabel}>Shares</Text> */}
-          <Text style={styles.statValue}>{formatNumber(item.shares || 0)}</Text>
+          <Text style={styles.statValue}>{formatNumber(item.shareCount || 0)}</Text>
         </View>
       </View>
     );
@@ -146,24 +161,24 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
   const renderNewsItem = ({ item }) => (
     <TouchableOpacity
       style={styles.newsCard}
-      onPress={() => handleNewsPress(item)}
+      onPress={() => handleNewsPress(item.newsId)}
       activeOpacity={0.9}
     >
       {/* News Title */}
       <Text style={styles.newsTitle} numberOfLines={1}>
-        {item.title}
+        {item.headline}
       </Text>
 
       {/* News Description */}
       <Text style={styles.newsDescription} numberOfLines={2}>
-        {item.description || 'No description available'}
+        {item.content || 'No description available'}
       </Text>
 
       {/* Stats Row */}
       {renderStats(item)}
 
       {/* Categories */}
-      {renderCategories(item.categories || item.tags || ['Politics', 'Local News', 'Breaking News'])}
+      {renderCategories(item.categories || [item.category] || ['Politics', 'Local News', 'Breaking News'])}
       
       {/* Separator */}
       <View style={styles.cardSeparator} />
@@ -187,7 +202,7 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       <FlatList
         data={verifiedNews}
         renderItem={renderNewsItem}
-        keyExtractor={(item) => item._id || item.id.toString()}
+          keyExtractor={(item) => item.newsId || item.newsId.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={

@@ -14,10 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
-import { userAPI } from '../../Axios/Api';
+
 import ErrorMessage from '../helpers/errormessage';
 import NewsDetails from '../news screen/newsdetail';
 import Loader from '../helpers/loader';
+import apiService from '../../Axios/Api';
+import { useAppContext } from '../../Store/contexts/app-context';
 
 const RejectedNewsScreen = ({ dateFilter }) => {
   const navigation = useNavigation();
@@ -25,25 +27,35 @@ const RejectedNewsScreen = ({ dateFilter }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [rejectedNews, setRejectedNews] = useState([]);
   const [error, setError] = useState(null);
-
+ const{user}=useAppContext();
   // Fetch rejected news
   const fetchRejectedNews = async () => {
     try {
       setError(null);
-      
-      const params = {
-        status: 'rejected',
-        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-        page: 1,
-        limit: 20,
-      };
-
-      console.log('Fetching rejected news:', params);
-      
-      const response = await userAPI.getRejectedNews (params);
-      
-      if (response.success) {
+          
+          // Get user ID from context/app state
+          const userId = user?.id || user?.userId; // Adjust based on your user object
+          
+          if (!userId) {
+            throw new Error('User ID not found');
+          }
+          
+          // Build parameters according to your API endpoint
+          const params = {
+            userId: userId,
+            status: 'REJECTED',
+            ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
+            ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
+            page: 1,
+            limit: 20,
+          };
+            console.log('Fetching verified news:', params);
+            
+           const response = await apiService.getAllNews(params);
+               console.log('API Response:', response);
+               
+               // Check response structure - adjust based on your actual API response
+               if (response.error === false) {
         setRejectedNews(response.data.news || response.data || []);
       } else {
         throw new Error(response.message || 'Failed to fetch rejected news');
@@ -70,10 +82,8 @@ const RejectedNewsScreen = ({ dateFilter }) => {
   };
 
   // Handle news item press
-  const handleNewsPress = (news) => {
-     navigation.navigate(NewsDetails, { 
-      newsId:1
-    });
+  const handleNewsPress = (id) => {
+    navigation.navigate('NewsDetails', { newsId: id });
   };
 
   // Get time period label
@@ -109,17 +119,17 @@ const RejectedNewsScreen = ({ dateFilter }) => {
   const renderNewsItem = ({ item }) => (
     <TouchableOpacity
       style={styles.newsCard}
-      onPress={() => handleNewsPress(item)}
+      onPress={() => handleNewsPress(item.newsId)}
       activeOpacity={0.9}
     >
       {/* News Title */}
       <Text style={styles.newsTitle} numberOfLines={1}>
-        {item.title}
+        {item.headline}
       </Text>
 
       {/* News Description */}
       <Text style={styles.newsDescription} numberOfLines={3}>
-        {item.description || 'No description available'}
+        {item.content || 'No description available'}
       </Text>
 
       {/* Repeat description lines (as shown in image)
@@ -136,7 +146,7 @@ const RejectedNewsScreen = ({ dateFilter }) => {
       </View>
 
       {/* Categories */}
-      {renderCategories(item.categories || item.tags || ['Politics', 'Local News'])}
+      {renderCategories(item.categories || [item.category] || ['Politics', 'Local News'])}
 
       {/* Separator */}
       <View style={styles.cardSeparator} />
@@ -161,7 +171,7 @@ const RejectedNewsScreen = ({ dateFilter }) => {
       <FlatList
         data={rejectedNews}
         renderItem={renderNewsItem}
-        keyExtractor={(item) => item._id || item.id.toString()}
+        keyExtractor={(item) => item.newsId || item.newsId.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
