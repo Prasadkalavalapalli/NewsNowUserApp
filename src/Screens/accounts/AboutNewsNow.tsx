@@ -14,6 +14,7 @@ import { regular, medium, semibold, bold } from "../helpers/fonts";
 import { adjust, h, w } from "../../constants/dimensions";
 import Header from "../helpers/header";
 import AlertMessage from "../helpers/alertmessage";
+import Toast from "react-native-toast-message";
 
 // =============================================================================
 // CONSTANTS
@@ -162,40 +163,29 @@ const AboutNewsNow: React.FC = () => {
   /**
    * Opens email client with pre-filled recipient
    */
-  const handleEmailPress = (): void => {
-    const emailUrl = `mailto:${COMPANY_CONTACT.email}`;
-    
-    Linking.canOpenURL(emailUrl)
-      .then((supported) => {
-        if (supported) {
-          Linking.openURL(emailUrl);
-        } else {
-          setAlertMessage("Email app is not available on this device");
-        }
-      })
-      .catch(() => {
-        setAlertMessage("Failed to open email app");
-      });
-  };
-
+ const handleEmailPress = (): void => {
+  const emailUrl = `mailto:${COMPANY_CONTACT.email}`;
+  
+  try {
+    Linking.openURL(emailUrl).catch(() => {
+      setAlertMessage("Failed to open email app");
+    });
+  } catch (error) {
+    console.error("Error opening email URL:", error);
+    setAlertMessage("Failed to open email app");
+  }
+};
   /**
    * Initiates phone call to company contact number
    */
-  const handlePhonePress = (): void => {
-    const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
-    
-    Linking.canOpenURL(phoneUrl)
-      .then((supported) => {
-        if (supported) {
-          setShowCallAlert(true);
-        } else {
-          setAlertMessage("Phone calls are not supported on this device");
-        }
-      })
-      .catch(() => {
-        setAlertMessage("Failed to initiate phone call");
-      });
-  };
+ const handlePhonePress = async (): Promise<void> => {
+  const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
+  
+  Linking.openURL(phoneUrl).catch((error) => {
+    console.error("Phone call failed:", error);
+    setAlertMessage("Failed to make phone call");
+  });
+};
 
   /**
    * Confirms phone call
@@ -211,18 +201,27 @@ const AboutNewsNow: React.FC = () => {
   /**
    * Opens company website in browser
    */
-  const handleWebsitePress = (): void => {
-    Linking.canOpenURL(COMPANY_CONTACT.website)
-      .then((supported) => {
-        if (supported) {
-          setShowWebsiteAlert(true);
-        } else {
-          setAlertMessage("Browser is not available on this device");
-        }
-      })
-      .catch(() => {
-        setAlertMessage("Failed to open website");
-      });
+  // const handleWebsitePress = (): void => {
+  //   Linking.canOpenURL(COMPANY_CONTACT.website)
+  //     .then((supported) => {
+  //       if (supported) {
+  //         setShowWebsiteAlert(true);
+  //       } else {
+  //         setAlertMessage("Browser is not available on this device");
+  //       }
+  //     })
+  //     .catch(() => {
+  //       setAlertMessage("Failed to open website");
+  //     });
+  // };
+
+   const handleWebsitePress = (): void => {
+    Toast.show({
+      type:'success',
+      text1:'Website Coming soon...!',
+      text2:'Thank You....'
+
+    })
   };
 
   /**

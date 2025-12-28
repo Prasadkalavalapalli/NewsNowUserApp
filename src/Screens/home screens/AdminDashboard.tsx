@@ -13,10 +13,11 @@ import Icon from 'react-native-vector-icons/FontAwesome6';
 import { useNavigation } from '@react-navigation/native';
 import { pallette } from '../helpers/colors';
 import { semibold, regular, medium } from '../helpers/fonts';
-import { userAPI } from '../../Axios/Api';
+import apiService, { userAPI } from '../../Axios/Api';
 import UploadScreen from '../news/UploadScreen';
 import { Screen } from 'react-native-screens';
 import { AppContext, useAppContext } from '../../Store/contexts/app-context';
+import Loader from '../helpers/loader';
 
 
 const AdminDashboard = () => {
@@ -28,8 +29,9 @@ const { user } = useAppContext();
   console.log(user);
   const fetchData = async () => {
     try {
-      const data = await userAPI.fetchDashboardStats();
-      setStats(data);
+      const data = await apiService.getDashboardStats({userId:2,roleId:1});
+      setStats(data.data);
+      console.log(data)
     } catch (err) {
       console.error('Error:', err);
     } finally {
@@ -46,75 +48,76 @@ const { user } = useAppContext();
     setRefreshing(true);
     fetchData();
   };
+// Helper function to get stats safely
+const getTotalStat = (key) => stats?.total[key] || 0;
+const getTodayStat = (key) => stats?.today[key] || 0;
 
-  const overallStats = [
-    {
-      title: 'Total News',
-      value: stats?.totalNews || 0,
-      icon: 'newspaper',
-      color: '#4361ee',
-      // onPress: () => navigation.navigate('NewsList', { filter: 'all' }),
-      onPress: () =>{},
-    },
-    {
-      title: 'Pending',
-      value: stats?.pendingNews || 0,
-      icon: 'clock',
-      color: '#ff9e00',
-      // onPress: () => navigation.navigate('NewsList', { filter: 'pending' }),
-      onPress: () =>{},
-    },
-    {
-      title: 'Verified',
-      value: stats?.verifiedNews || 0,
-      icon: 'circle-check',
-      color: '#00b894',
-      // onPress: () => navigation.navigate('NewsList', { filter: 'verified' }),
-      onPress: () =>{},
-    },
-    {
-      title: 'Rejected',
-      value: stats?.rejectedNews || 0,
-      icon: 'circle-xmark',
-      color: '#ff6b6b',
-      // onPress: () => navigation.navigate('NewsList', { filter: 'rejected' }),
-      onPress: () =>{},
-    },
-  ];
+const overallStats = [
+  {
+    title: 'Total News',
+    value: getTotalStat("Total News"),
+    icon: 'newspaper',
+    color: '#4361ee',
+    onPress: () => navigation.navigate('NewsList', { filter: 'all' }),
+  },
+  {
+    title: 'Pending',
+    value: getTotalStat("Pending News"),
+    icon: 'clock',
+    color: '#ff9e00',
+    onPress: () => navigation.navigate('NewsList', { filter: 'pending' }),
+  },
+  {
+    title: 'Verified',
+    value: getTotalStat("Published News"), // Map API's "Published News" to "Verified"
+    icon: 'circle-check',
+    color: '#00b894',
+    onPress: () => navigation.navigate('NewsList', { filter: 'verified' }),
+  },
+  {
+    title: 'Rejected',
+    value: getTotalStat("Rejected News"),
+    icon: 'circle-xmark',
+    color: '#ff6b6b',
+    onPress: () => navigation.navigate('NewsList', { filter: 'rejected' }),
+  },
+];
 
-  const todayStats = [
-    {
-      title: 'New Articles',
-      value: stats?.todayNewArticles || 0,
-      icon: 'arrow-up',
-      color: '#00b894',
-    },
-    {
-      title: 'Verified',
-      value: stats?.todayVerified || 0,
-      icon: 'check',
-      color: '#4361ee',
-    },
-    {
-      title: 'Pending',
-      value: stats?.verifiedNews || 0,
-      icon: 'clock',
-      color: '#00b894',
-     
-    },
-    {
-      title: 'Rejected',
-      value: stats?.rejectedNews || 0,
-      icon: 'circle-xmark',
-      color: '#ff6b6b',
-     
-    },
-  ];
+const todayStats = [
+  {
+    title: 'New Today',
+    value: getTodayStat("Total News"),
+    icon: 'arrow-up',
+    color: '#00b894',
+    onPress: () => navigation.navigate('NewsList', { filter: 'all', timeframe: 'today' }),
+  },
+  {
+    title: 'Pending Today',
+    value: getTodayStat("Pending News"),
+    icon: 'clock',
+    color: '#ff9e00',
+    onPress: () => navigation.navigate('NewsList', { filter: 'pending', timeframe: 'today' }),
+  },
+  {
+    title: 'Verified Today',
+    value: getTodayStat("Published News"), // Map API's "Published News" to "Verified Today"
+    icon: 'check',
+    color: '#4361ee',
+    onPress: () => navigation.navigate('NewsList', { filter: 'verified', timeframe: 'today' }),
+  },
+  {
+    title: 'Rejected Today',
+    value: getTodayStat("Rejected News"),
+    icon: 'circle-xmark',
+    color: '#ff6b6b',
+    onPress: () => navigation.navigate('NewsList', { filter: 'rejected', timeframe: 'today' }),
+  },
+];
 
   const actionCards = [
     {
       title: 'Reporters',
-      value: stats?.totalReporters || 0,
+      value: stats?.total['Reporter Management'] || 0,
       icon: 'users',
       color: '#6c5ce7',
       onPress: () => navigation.navigate('ReporterList'),
@@ -160,9 +163,7 @@ const { user } = useAppContext();
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={pallette.primary} />
-      </View>
+      <Loader/>
     );
   }
 
@@ -245,7 +246,7 @@ const { user } = useAppContext();
           </View>
         </View>
 
-      {user?.role==='admin'?<View>
+      {user?.role.toLowerCase()=='admin'?<View>
         {/* Management Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Management</Text>

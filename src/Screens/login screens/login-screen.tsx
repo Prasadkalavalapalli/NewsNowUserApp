@@ -19,6 +19,7 @@ import AlertMessage from '../helpers/alertmessage';
 import { useAppContext } from '../../Store/contexts/app-context';
 import ReporterRegistration from '../Reporter Screens/ReporterRegister';
 import { useNavigation } from '@react-navigation/native';
+import apiService from '../../Axios/Api';
 
 const LoginScreen = () => {
 
@@ -53,23 +54,23 @@ const LoginScreen = () => {
     setLoading(true);
 
     try {
-      // Mock login - replace with your actual API call
-      const success = await login({
-        id: '1',
-        name: 'User Name',
-        email: username,
-        role: 'admin',
-        // role: 'reporter',
-        //  role: 'user',
-      });
-
-      if (success) {
+      
+     const response= await apiService.login(username,password)
+     console.log(response);
+      if (response.error==false) {
+        await login(
+          response.data
+        )
         setToast({
           message: 'Login successful!',
           type: 'success'
         });
         // Navigation would typically happen after successful login
       } else {
+        setToast({
+          message: response.message,
+          type: 'error'
+        });
         setAlertMessage('Invalid username or password');
       }
     } catch (error) {

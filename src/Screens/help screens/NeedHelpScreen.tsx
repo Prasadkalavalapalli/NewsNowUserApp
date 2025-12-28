@@ -142,7 +142,7 @@ const NeedHelpPopup: React.FC<Props> = ({ visible, onClose, onSubmit }) => {
   };
 
   const handleEmail = () => {
-    Linking.openURL("mailto:support@evya.com").catch(() => {
+    Linking.openURL("mailto:support@NewsNow.com").catch(() => {
       Toast.show({
         type: 'error',
         text1: 'Cannot Open Email',

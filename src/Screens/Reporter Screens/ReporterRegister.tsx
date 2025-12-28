@@ -21,7 +21,7 @@ import { h, w, adjust } from '../../constants/dimensions';
 import MainHeader from '../helpers/mainheader';
 import ToastMessage from '../helpers/ToastMessage';
 import Header from '../helpers/header';
-import { authAPI } from '../../Axios/Api';
+import apiService, { authAPI } from '../../Axios/Api';
 
 
 const ReporterRegistration = () => {
@@ -31,7 +31,7 @@ const ReporterRegistration = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    phone: '',
+    mobileNumber: '',
     password: '',
     confirmPassword: '',
     address: '',
@@ -93,7 +93,7 @@ const ReporterRegistration = () => {
     // Required fields
     if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!formData.mobileNumber.trim()) newErrors.mobileNumber = 'Phone number is required';
     if (!formData.password) newErrors.password = 'Password is required';
     if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirm password is required';
     if (!formData.idProofNumber.trim()) newErrors.idProofNumber = 'ID Proof number is required';
@@ -106,8 +106,8 @@ const ReporterRegistration = () => {
 
     // Phone validation (Indian numbers)
     const phoneRegex = /^[6-9]\d{9}$/;
-    if (formData.phone && !phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Please enter a valid 10-digit Indian phone number';
+    if (formData.mobileNumber&& !phoneRegex.test(formData.mobileNumber.replace(/\D/g, ''))) {
+      newErrors.mobileNumber = 'Please enter a valid 10-digit Indian phone number';
     }
 
     // Password validation
@@ -149,27 +149,26 @@ const ReporterRegistration = () => {
       const registrationData = {
         name: formData.fullName,
         email: formData.email.toLowerCase(),
-        phone: formData.phone,
+        mobileNumber: formData.mobileNumber,
         password: formData.password,
-        address: formData.address,
+        // address: formData.address,
         city: formData.city,
         state: formData.state,
-        pincode: formData.pincode,
+        zipCode: formData.pincode,
         idProofType: formData.idProofType,
         idProofNumber: formData.idProofNumber,
         experience: formData.experience ? parseInt(formData.experience) : 0,
-        specialization: formData.specialization ? [formData.specialization] : [],
-        status: 'pending', // New reporters are pending by default
-        createdAt: new Date().toISOString(),
+        specialization: formData.specialization ? [formData.specialization] :'',
+        
         roleId:1
       };
 
       console.log('Registering reporter:', registrationData);
 
       // API call - replace with your actual API
-      const response = await authAPI.register(registrationData);
-
-      if (response.success) {
+      const response = await apiService.register (registrationData);
+      console.log(response);
+      if (response.error===false) {
         setToast({
           message: 'Registration successful! Your account is pending approval.',
           type: 'success'
@@ -179,7 +178,7 @@ const ReporterRegistration = () => {
         setFormData({
           fullName: '',
           email: '',
-          phone: '',
+          mobileNumber: '',
           password: '',
           confirmPassword: '',
           address: '',
@@ -300,7 +299,7 @@ const ReporterRegistration = () => {
             
             {renderInput('Full Name', 'fullName', 'Enter your full name')}
             {renderInput('Email Address', 'email', 'example@email.com', 'email-address')}
-            {renderInput('Phone Number', 'phone', 'Enter 10-digit number', 'phone-pad')}
+            {renderInput('Phone Number', 'mobileNumber', 'Enter 10-digit number', 'phone-pad')}
             {renderInput('Address', 'address', 'Your complete address')}
             
             <View style={styles.row}>

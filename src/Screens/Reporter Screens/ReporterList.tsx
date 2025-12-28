@@ -16,7 +16,7 @@ import { pallette } from '../helpers/colors';
 import { regular, medium, semibold, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import ToastMessage from '../helpers/ToastMessage';
-import { reporterAPI, userAPI } from '../../Axios/Api';
+import apiService, { reporterAPI, userAPI } from '../../Axios/Api';
 import ReporterDetailsScreen from './ReporterDetailsScreen';
 import Loader from '../helpers/loader';
 
@@ -31,7 +31,7 @@ const ReporterList = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filteredReporters, setFilteredReporters] = useState([]);
   const [stats, setStats] = useState({
-    total: 0,
+    all: 0,
     active: 0,
     pending: 0,
     suspended: 0,
@@ -48,18 +48,17 @@ const ReporterList = () => {
   // Fetch reporters
   const fetchReporters = async () => {
     try {
-      const response = await  reporterAPI.getAllReporters(1);
+      const response = await apiService.getAllReporters(1);
       console.log(response);
-      if (response.success) {
-        const reportersData = response|| [];
+      if (response.error===false) {
+        const reportersData = response.data|| [];
         setReporters(reportersData);
-        
         // Calculate stats
         const newStats = {
-          total: reportersData.length,
-          active: reportersData.filter(r => r.status === 'active').length,
+          all: reportersData.length,
+          active: reportersData.filter(r => r.enabled === 'active').length,
           pending: reportersData.filter(r => r.status === 'pending').length,
-          suspended: reportersData.filter(r => r.status === 'suspended').length,
+          suspended: reportersData.filter(r => r.enabled === 'suspended').length,
         };
         setStats(newStats);
       }
@@ -102,7 +101,7 @@ const ReporterList = () => {
 
   // Handle reporter press
   const handleReporterPress = (reporter) => {
-    navigation.navigate('ReporterDetailsScreen', { reporterId: reporter.id || reporter._id });
+    navigation.navigate('ReporterDetailsScreen', { reporterId: reporter.userId || reporter._id });
   };
 
   // Get status color

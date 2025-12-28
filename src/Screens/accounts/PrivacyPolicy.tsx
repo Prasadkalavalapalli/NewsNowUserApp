@@ -14,6 +14,7 @@ import { regular, medium, semibold, bold } from "../helpers/fonts";
 import { adjust, h, w } from "../../constants/dimensions";
 import Header from "../helpers/header";
 import AlertMessage from "../helpers/alertmessage";  // Import your AlertMessage component
+import Toast from "react-native-toast-message";
 
 // =============================================================================
 // CONSTANTS
@@ -133,39 +134,54 @@ const PrivacyPolicy: React.FC = () => {
 /**
  * Opens email client with pre-filled recipient
  */
-const handleEmailPress = (email: string): void => {
-  const emailUrl = `mailto:${email}`;
+ const handleEmailPress = (): void => {
+  const emailUrl = `mailto:${COMPANY_CONTACT.email}`;
   
-  Linking.canOpenURL(emailUrl)
-    .then((supported) => {
-      if (supported) {
-        Linking.openURL(emailUrl);
-      } else {
-        setAlertMessage("Email app is not available on this device");
-      }
-    })
-    .catch(() => {
+  try {
+    Linking.openURL(emailUrl).catch(() => {
       setAlertMessage("Failed to open email app");
     });
+  } catch (error) {
+    console.error("Error opening email URL:", error);
+    setAlertMessage("Failed to open email app");
+  }
 };
-
+  /**
+   * Initiates phone call to company contact number
+   */
+ const handlePhonePress = async (): Promise<void> => {
+  const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
+  
+  Linking.openURL(phoneUrl).catch((error) => {
+    console.error("Phone call failed:", error);
+    setAlertMessage("Failed to make phone call");
+  });
+};
 /**
  * Opens privacy policy webpage
  */
-const handleWebsitePress = (): void => {
-  Linking.canOpenURL(COMPANY_CONTACT.website)
-    .then((supported) => {
-      if (supported) {
-        Linking.openURL(COMPANY_CONTACT.website);
-      } else {
-        setAlertMessage("Browser is not available on this device");
-      }
-    })
-    .catch(() => {
-      setAlertMessage("Failed to open website");
-    });
-};
+// const handleWebsitePress = (): void => {
+//   Linking.canOpenURL(COMPANY_CONTACT.website)
+//     .then((supported) => {
+//       if (supported) {
+//         Linking.openURL(COMPANY_CONTACT.website);
+//       } else {
+//         setAlertMessage("Browser is not available on this device");
+//       }
+//     })
+//     .catch(() => {
+//       setAlertMessage("Failed to open website");
+//     });
+// };
+  const handleWebsitePress = (): void => {
+    
+    Toast.show({
+      type:'success',
+      text1:'Website Coming soon...!',
+      text2:'Thank You....'
 
+    })
+  };
 // =============================================================================
 // COMPONENT: CONTACT INFO ITEM
 // =============================================================================
@@ -241,33 +257,6 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ title, content, bullets
     navigation.goBack();
   };
 
-  /**
-   * Initiates phone call to company contact number
-   */
-  const handlePhonePress = (): void => {
-    setShowPhoneAlert(true);
-  };
-
-  /**
-   * Confirms phone call and opens dialer
-   */
-  const confirmPhoneCall = (confirmed: boolean): void => {
-    setShowPhoneAlert(false);
-    if (confirmed) {
-      const phoneUrl = `tel:${COMPANY_CONTACT.phone}`;
-      Linking.canOpenURL(phoneUrl)
-        .then((supported) => {
-          if (supported) {
-            Linking.openURL(phoneUrl);
-          } else {
-            setAlertMessage("Phone calls are not supported on this device");
-          }
-        })
-        .catch(() => {
-          setAlertMessage("Failed to initiate phone call");
-        });
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -377,11 +366,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ title, content, bullets
         onClose={() => setAlertMessage("")}
       />
      
-      <AlertMessage
-        message="Do you want to call our support team?"
-        onClose={confirmPhoneCall}
-        showConfirm={true}
-      />
+      
     </View>
   );
 };

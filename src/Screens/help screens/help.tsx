@@ -1,29 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   SafeAreaView,
   RefreshControl,
   Linking,
 } from "react-native";
-import axios from "axios";
-import { pallette } from "../helpers/colors";
-import NeedHelpPopup from "./NeedHelpScreen";
 import { useNavigation } from "@react-navigation/native";
-import Header from "../helpers/header";
 import Toast from 'react-native-toast-message';
-import AlertMessage from "../helpers/alertmessage";
 import { useAppContext } from "../../Store/contexts/app-context";
-import { userAPI } from "../../Axios/Api";
+import Header from "../helpers/header";
+import Loader from "../helpers/loader";
+import AlertMessage from "../helpers/alertmessage";
+import NeedHelpPopup from "./NeedHelpScreen";
+import apiService from "../../Axios/Api";
+import { pallette } from "../helpers/colors";
 import { medium } from "../helpers/fonts";
 import { adjust, h } from "../../constants/dimensions";
-import Loader from "../helpers/loader";
 
-
+// Types
 interface Note {
   id: number;
   title: string;
@@ -37,372 +35,278 @@ interface Ticket {
   category: string;
   email?: string;
   status: string;
+  description?: string | null;
   comment?: string | null;
   notes?: Note[] | null;
-  createdDate?: string | null;
+  createdAt?: string | null;
 }
 
 const HelpScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const { user } = useAppContext();
+  
+  // State
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
   const [alertComponent, setAlertComponent] = useState<React.ReactNode>(null);
-  const navigation = useNavigation();
-    const { user } = useAppContext();
-    const staticTickets: Ticket[] = [
-  {
-    id: 1,
-    ticketId: "TK-2024-001",
-    issue: "Unable to login to the application",
-    category: "Authentication",
-    email: "user1@gmail.com",
-    status: "Open",
-    comment: "Getting 'Invalid Credentials' error even with correct password",
-    notes: [
-      {
-        id: 101,
-        title: "Initial Troubleshooting",
-        notes: "Asked user to reset password via email"
-      },
-      {
-        id: 102,
-        title: "Follow-up",
-        notes: "User confirmed password reset but still can't login"
-      }
-    ],
-    createdDate: "2024-01-15T10:30:00Z"
-  },
-  {
-    id: 2,
-    ticketId: "TK-2024-002",
-    issue: "Payment gateway not working",
-    category: "Payment",
-    email: "user2@example.com",
-    status: "InProgress",
-    comment: "Credit card payment failing at checkout",
-    notes: [
-      {
-        id: 201,
-        title: "Payment Logs",
-        notes: "Checked transaction logs - gateway timeout"
-      }
-    ],
-    createdDate: "2024-01-16T14:20:00Z"
-  },
-  {
-    id: 3,
-    ticketId: "TK-2024-003",
-    issue: "Profile picture not uploading",
-    category: "Profile",
-    email: "user3@example.com",
-    status: "Resolved",
-    comment: "Error when trying to upload profile image",
-    notes: [
-      {
-        id: 301,
-        title: "Issue Analysis",
-        notes: "File size was exceeding 5MB limit"
-      },
-      {
-        id: 302,
-        title: "Solution",
-        notes: "User resized image and uploaded successfully"
-      }
-    ],
-    createdDate: "2024-01-10T09:15:00Z"
-  },
-  {
-    id: 4,
-    ticketId: "TK-2024-004",
-    issue: "App crashing on startup",
-    category: "Technical",
-    email: "user4@example.com",
-    status: "Closed",
-    comment: "App crashes immediately after splash screen",
-    notes: [
-      {
-        id: 401,
-        title: "Debug Info",
-        notes: "User sent crash logs - memory overflow issue"
-      },
-      {
-        id: 402,
-        title: "Update Required",
-        notes: "Fixed in version 2.1.0, asked user to update"
-      }
-    ],
-    createdDate: "2024-01-05T16:45:00Z"
-  },
-  {
-    id: 5,
-    ticketId: "TK-2024-005",
-    issue: "Notification not received",
-    category: "Notifications",
-    email: "user5@example.com",
-    status: "Open",
-    comment: "Not getting push notifications for new messages",
-    notes: [
-      {
-        id: 501,
-        title: "Permissions Check",
-        notes: "User has granted all required permissions"
-      }
-    ],
-    createdDate: "2024-01-17T11:10:00Z"
-  },
-  {
-    id: 6,
-    ticketId: "TK-2024-006",
-    issue: "Data synchronization error",
-    category: "Sync",
-    email: "user6@example.com",
-    status: "InProgress",
-    comment: "Data not syncing across multiple devices",
-    createdDate: "2024-01-18T13:25:00Z"
-  },
-  {
-    id: 7,
-    ticketId: "TK-2024-007",
-    issue: "Wrong currency displayed",
-    category: "Localization",
-    email: "user7@example.com",
-    status: "Resolved",
-    comment: "App showing USD instead of EUR",
-    notes: [
-      {
-        id: 701,
-        title: "Bug Fix",
-        notes: "Fixed currency detection based on IP location"
-      }
-    ],
-    createdDate: "2024-01-12T08:40:00Z"
-  },
-  {
-    id: 8,
-    ticketId: "TK-2024-008",
-    issue: "Dark mode not working",
-    category: "UI/UX",
-    email: "user8@example.com",
-    status: "Closed",
-    comment: "App remains in light mode despite system dark mode",
-    createdDate: "2024-01-08T15:55:00Z"
-  }
-];
-  // Fetch tickets from backend
-  const fetchTickets = async () => {
+
+  // Fetch tickets
+  const fetchTickets = useCallback(async () => {
     try {
       if (!refreshing) setLoading(true);
-      const res = await userAPI.getAllNews();
-      console.log("Fetched tickets:", res.data);
-      setTickets(staticTickets||res.data || []);
-    } catch (error) {
+       const res = await apiService.getAllTickets(user?.id);
+   
+      if (res.error === false) {
+        setTickets(res.data || []);
+      } else {
+        throw new Error(res.message || 'Failed to fetch tickets');
+      }
+    } catch (error: any) {
       console.error("Error fetching tickets:", error);
       Toast.show({
         type: 'error',
         text1: 'Failed to load tickets',
-        text2: 'Please check your connection and try again',
+        text2: error.message || 'Please try again',
       });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.id, refreshing]);
 
   useEffect(() => {
     fetchTickets();
-  }, []);
+  }, [fetchTickets]);
 
   // Filter tickets based on tab
-  const filteredTickets = tickets.filter(
-    (t) =>
-      t.status &&
-      (activeTab === "open"
-        ? t.status.toLowerCase() === "open"||t.status.toLowerCase() === "inprogress"
-        : ["closed", "resolved"].includes(t.status.toLowerCase()))
-  );
-console.log(tickets);
-  // Add new ticket
-  const addTicket = async (ticketData: Partial<Ticket> & { type: string; userId: number }) => {
+  const filteredTickets = tickets.filter(ticket => {
+    if (!ticket.status) return false;
+    
+    const status = ticket.status.toLowerCase();
+    if (activeTab === "open") {
+      return status === "open" || status === "inprogress"||status==='in_progress';
+    } else {
+      return status === "closed" || status === "resolved";
+    }
+  });
+
+  // Create new ticket
+  const handleCreateTicket = async (ticketData: {
+    issue: string;
+    comment: string;
+    email: string;
+  }) => {
     try {
       setLoading(true);
-      const res = await StationsService.createTicket(
-        ticketData
-      );
-      Toast.show({
-        type: 'success',
-        text1: 'Ticket Created Successfully',
-        text2: `Ticket #${res.data.ticketId} has been created`,
+      const res = await apiService.createTicket({
+        userId: user?.id,
+        title: ticketData.issue,
+        description: ticketData.comment,
+        email: ticketData.email
       });
 
-      // Append new ticket to state so it shows immediately
-      setTickets((prev) => [res.data, ...prev]);
+      if (res.error === false) {
+        Toast.show({
+          type: 'success',
+          text1: res.message,
+          text2: `Ticket TKT-${res.data.id} has been created`,
+        });
+
+        setTickets(prev => [res.data, ...prev]);
+      } else {
+        throw new Error(res.message || 'Failed to create ticket');
+      }
     } catch (error: any) {
-      console.error("Error creating ticket:", error.response || error);
+      console.error("Error creating ticket:", error);
       Toast.show({
         type: 'error',
         text1: 'Failed to Create Ticket',
-        text2: error?.response?.data?.message || 'Please try again later',
+        text2: error.message || 'Please try again',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle delete ticket
-  const handleDeleteTicket = (ticket: Ticket) => {
+  // Update ticket status
+  const handleUpdateTicketStatus = async (ticket: Ticket) => {
+    try {
+      const res = await apiService.updateTicketStatus({
+        userId: user?.id,
+        ticketId: ticket.id,
+        status: 'RESOLVED'
+      });
+
+      if (res.error === false) {
+        setTickets(prev => prev.map(t => 
+          t.id === ticket.id ? { ...t, status: 'RESOLVED' } : t
+        ));
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Ticket Updated',
+          text2: `Ticket #TKT-${ticket.id} has been resolved`,
+        });
+      } else {
+        throw new Error(res.message || 'Failed to update ticket');
+      }
+    } catch (error: any) {
+      console.error("Error updating ticket:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Update Failed',
+        text2: error.message || 'Failed to update ticket',
+      });
+    }
+  };
+
+  // Show confirmation alert for ticket update
+  const showUpdateConfirmation = (ticket: Ticket) => {
     setAlertComponent(
       <AlertMessage
-        message={`Delete Ticket #${ticket.ticketId}?`}
+        message={`Resolve Ticket TKT-${ticket.id}?`}
         showConfirm={true}
         onClose={async (confirmed: boolean) => {
           setAlertComponent(null);
-          if (!confirmed) return;
-
-          try {
-            // Simulate delete API call
-            await StationsService.deleteTicket(
-              ticket.id
-            );
-            
-            setTickets(prev => prev.filter(t => t.id !== ticket.id));
-            
-            Toast.show({
-              type: 'success',
-              text1: 'Ticket Deleted',
-              text2: `Ticket #${ticket.ticketId} has been deleted`,
-            });
-          } catch (error) {
-            Toast.show({
-              type: 'error',
-              text1: 'Delete Failed',
-              text2: 'Failed to delete ticket. Please try again.',
-            });
+          if (confirmed) {
+            await handleUpdateTicketStatus(ticket);
           }
         }}
       />
     );
   };
 
+  // Handle email reply
+  const handleEmailReply = (email: string) => {
+    if (!email) {
+      Toast.show({
+        type: 'error',
+        text1: 'Email Failed',
+        text2: 'Email not available',
+      });
+      return;
+    }
+
+    const emailUrl = `mailto:${email}`;
+    Linking.openURL(emailUrl).catch(() => {
+      Toast.show({
+        type: 'error',
+        text1: 'Email Failed',
+        text2: 'Unable to open email app',
+      });
+    });
+  };
+
+  // Helper functions
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
-    if (statusLower === 'open') return pallette.primary;
-    if (statusLower === 'closed') return pallette.lightred;
-    if (statusLower === 'resolved') return pallette.l2;
-    if (statusLower === 'inprogress') return pallette.gold;
-    return pallette.grey;
+    switch (statusLower) {
+      case 'open': return pallette.primary;
+      case 'closed': return pallette.lightred;
+      case 'resolved': return pallette.l2;
+      case 'inprogress': return pallette.gold;
+      default: return pallette.grey;
+    }
   };
 
   const getStatusText = (status: string) => {
     const statusLower = status.toLowerCase();
-    if (statusLower === 'open') return 'OPEN';
-    if (statusLower === 'closed') return 'CLOSED';
-    if (statusLower === 'resolved') return 'RESOLVED';
-    if (statusLower === 'in progress') return 'IN PROGRESS';
-    return status.toUpperCase();
+    switch (statusLower) {
+      case 'open': return 'OPEN';
+      case 'closed': return 'CLOSED';
+      case 'resolved': return 'RESOLVED';
+      case 'inprogress': return 'IN PROGRESS';
+      default: return status.toUpperCase();
+    }
   };
 
-  const handleEmailPress = (email) => {
-      if (email) {
-        const emailUrl = `mailto:${email}`;
-      Linking.openURL(emailUrl).catch(() => {
-         Toast.show({
-              type: 'error',
-              text1: 'Email Failed',
-              text2: 'Unable to open email app. Please try again.',
-            });
-        });
-      } else {
-         Toast.show({
-              type: 'error',
-              text1: 'Email Failed',
-              text2: 'Email not available. Please try again.',
-            });
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Render ticket item
+  const renderTicket = ({ item }: { item: Ticket }) => {
+    const isAdmin = user?.role === 'admin';
+    const isResolvedOrClosed = ['resolved', 'closed'].includes(item.status.toLowerCase());
+    const showActions = isAdmin && !isResolvedOrClosed;
+
+    return (
+      <View style={styles.ticketCard}>
+        {/* Header */}
+        <View style={styles.ticketHeader}>
+          <View style={styles.ticketIdContainer}>
+            <Text style={styles.ticketId}>TKT-{item.id}</Text>
+            <Text style={styles.ticketCategory}>{item.title}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+            <Text style={[styles.ticketStatus, { color: getStatusColor(item.status) }]}>
+              {getStatusText(item.status)}
+            </Text>
+          </View>
+        </View>
         
-      }
-    };
-  const renderTicket = ({ item }: { item: Ticket }) => (
-  <View style={styles.ticketCard}>
-    <View style={styles.ticketHeader}>
-      <View style={styles.ticketIdContainer}>
-        <Text style={styles.ticketId}>#{item.ticketId}</Text>
-        <Text style={styles.ticketCategory}>{item.category}</Text>
-      </View>
-      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-        <Text style={[styles.ticketStatus, { color: getStatusColor(item.status) }]}>
-          {getStatusText(item.status)}
-        </Text>
-      </View>
-    </View>
-    
-    <Text style={styles.ticketIssue}>{item.issue}</Text>
-    
-    {item.comment ? (
-      <View style={styles.commentContainer}>
-        <Text style={styles.commentLabel}>Description:</Text>
-        <Text style={styles.comment}>💬 {item.comment}</Text>
-      </View>
-    ) : null}
-    
-    {item.notes?.length ? (
-      <View style={styles.notesContainer}>
-        <Text style={styles.notesLabel}>Notes:</Text>
-        {item.notes.map((n) => (
-          <View key={n.id} style={styles.noteItem}>
-            <Text style={styles.noteTitle}> {n.title}</Text>
-            <Text style={styles.noteText}>{n.notes}</Text>
+        {/* Content */}
+        <Text style={styles.ticketIssue}>{item.description}</Text>
+        
+        {item.comment && (
+          <View style={styles.commentContainer}>
+            <Text style={styles.commentLabel}>Description:</Text>
+            <Text style={styles.comment}>💬 {item.comment}</Text>
+          </View>
+        )}
+        
+        {item.notes?.map(note => (
+          <View key={note.id} style={styles.noteItem}>
+            <Text style={styles.noteTitle}>{note.title}</Text>
+            <Text style={styles.noteText}>{note.notes}</Text>
           </View>
         ))}
-      </View>
-    ) : null}
 
-    {item.createdDate && (
-      <Text style={styles.createdDate}>
-        Created: {new Date(item.createdDate).toLocaleDateString()}
-      </Text>
-    )}
-    
-    {/* Condition: Show buttons only for admin AND if ticket is NOT resolved/closed */}
-    {user?.role === 'admin' && 
-     item.status.toLowerCase() !== 'resolved' && 
-     item.status.toLowerCase() !== 'closed' ? (
-      <View>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.rejectButton]}
-            onPress={() =>  handleEmailPress ({ email: item.email })}
-          >
-            <Text style={styles.rejectButtonText}>Reply</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionButton, styles.approveButton]}
-            onPress={() =>{} }
-          >
-            <Text style={styles.approveButtonText}>Solved</Text>
-          </TouchableOpacity>
-        </View>
+        {item.createdAt && (
+          <Text style={styles.createdDate}>
+            Created: {formatDate(item.createdAt)}
+          </Text>
+        )}
+        
+        {/* Admin Actions */}
+        {showActions && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={() => handleEmailReply(item.email)}
+            >
+              <Text style={styles.rejectButtonText}>Reply</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.actionButton, styles.approveButton]}
+              onPress={() => showUpdateConfirmation(item)}
+            >
+              <Text style={styles.approveButtonText}>Mark as Solved</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-    ) : null}
-    
-  </View>
-);
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <Header
         onback={() => navigation.goBack()}
+        hastitle={true}
+        title={'Help Center'}
         active={1}
         onSkip={() => {}}
         skippable={false}
-        hastitle={true}
-        title={'Help Center'}
       />
 
      
-
       {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -435,13 +339,12 @@ console.log(tickets);
       {/* Ticket List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={pallette.primary} />
-          <Text style={styles.loadingText}><Loader/></Text>
+          <Loader />
         </View>
       ) : (
         <FlatList
           data={filteredTickets}
-          keyExtractor={(item) => item.ticketId}
+          keyExtractor={(item) => item.ticketId || item.id.toString()}
           renderItem={renderTicket}
           refreshControl={
             <RefreshControl
@@ -456,7 +359,6 @@ console.log(tickets);
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}></Text>
               <Text style={styles.emptyText}>
                 No {activeTab === "open" ? "open" : "closed"} tickets
               </Text>
@@ -471,7 +373,16 @@ console.log(tickets);
           showsVerticalScrollIndicator={false}
         />
       )}
- {/* Add Ticket Button */}
+
+      {/* Popup and Alerts */}
+      <NeedHelpPopup
+        visible={popupVisible}
+        onClose={() => setPopupVisible(false)}
+        onSubmit={handleCreateTicket}
+      />
+      {alertComponent}
+      <Toast position="top" visibilityTime={4000} />
+       {/* Create Ticket Button */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.addButton} 
@@ -481,31 +392,12 @@ console.log(tickets);
           <Text style={styles.addButtonText}>＋ Create Ticket</Text>
         </TouchableOpacity>
       </View>
-      {/* NeedHelpPopup */}
-      <NeedHelpPopup
-        visible={popupVisible}
-        onClose={() => setPopupVisible(false)}
-        onSubmit={(ticketData) => {
-          addTicket({
-            ...ticketData,
-            type: "Ticket",
-            userId: userId,
-            status: "Open",
-            orgId: 1,
-            priority: "High",
-          });
-          setPopupVisible(false);
-        }}
-      />
 
-      {/* Alert Component */}
-      {alertComponent}
-
-      <Toast position="top" visibilityTime={4000} />
     </SafeAreaView>
   );
 };
 
+// Styles
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -548,14 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     position: 'relative',
   },
-  activeTab: {
-    // backgroundColor: pallette.white,
-    // elevation: 2,
-    // shadowColor: pallette.black,
-    // shadowOffset: { width: 0, height: 1 },
-    // shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
+  activeTab: {},
   tabText: { 
     fontSize: 14, 
     color: pallette.grey,
@@ -586,12 +471,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: pallette.grey,
   },
   listContainer: {
     paddingHorizontal: 20,
@@ -634,8 +513,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   ticketStatus: { 
     fontSize: 10, 
@@ -665,15 +542,6 @@ const styles = StyleSheet.create({
     color: pallette.black,
     lineHeight: 18,
   },
-  notesContainer: { 
-    marginBottom: 8,
-  },
-  notesLabel: {
-    fontSize: 12,
-    color: pallette.grey,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
   noteItem: {
     marginBottom: 6,
   },
@@ -694,46 +562,11 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: 12,
   },
-  deleteButton: {
-    backgroundColor: pallette.lightred,
-    paddingHorizontal:8,
-    paddingVertical:3,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginEnd:6
-  },
-  deleteButtonText: {
-    color: pallette.red,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: pallette.black,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: pallette.grey,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-   actionButtons: {
+  actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: h * 0.015,
+    marginTop: 8,
   },
   actionButton: {
     flex: 1,
@@ -757,9 +590,27 @@ const styles = StyleSheet.create({
     borderColor: pallette.primary,
   },
   approveButtonText: {
-    fontSize:adjust(14),
+    fontSize: adjust(14),
     fontFamily: medium,
     color: pallette.white,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: pallette.black,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: pallette.grey,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
 

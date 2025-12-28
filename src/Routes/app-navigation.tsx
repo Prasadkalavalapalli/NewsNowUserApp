@@ -98,7 +98,8 @@ const ReporterHomeStack = () => (
 // Main Tab Navigator
 const TabNav = () => {
   const { user } = useAppContext();
-
+const role = user?.role?.toLowerCase();
+console.log(role);
   // Define tabs based on user role (example)
   const userTabs = [
     {
@@ -107,7 +108,7 @@ const TabNav = () => {
       title: strings.AdminHome,
       activeIcon: 'home',
       inactiveIcon: 'home-outline',
-      show: user?.role === 'admin' || user?.role === 'reporter', // Control visibility
+      show: role === 'admin' || role === 'reporter', // Control visibility
     },
     {
       name: strings.upload,
@@ -115,7 +116,7 @@ const TabNav = () => {
       title: strings.upload,
       activeIcon: 'cloud-upload',
       inactiveIcon: 'cloud-upload-outline',
-      show: user?.role === 'reporter' || user?.role === 'admin',
+      show: role === 'reporter' || role === 'admin',
     },
     {
       name: strings.ReporterHome,
@@ -131,7 +132,7 @@ const TabNav = () => {
       title: strings.NewsStatus,
       activeIcon: 'newspaper-variant',
       inactiveIcon: 'newspaper-variant-outline',
-      show: user?.role === 'reporter'|| user?.role === 'admin'
+      show: role === 'reporter'|| role === 'admin'
     },
     // {
     //   name: strings.UserProfile,

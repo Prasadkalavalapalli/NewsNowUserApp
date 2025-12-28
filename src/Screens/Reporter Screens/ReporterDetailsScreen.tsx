@@ -17,7 +17,7 @@ import { regular, medium, semibold, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import ToastMessage from '../helpers/ToastMessage';
 import AlertMessage from '../helpers/alertmessage';
-import { userAPI } from '../../Axios/Api';
+import apiService, { userAPI } from '../../Axios/Api';
 import Loader from '../helpers/loader';
 import Header from '../helpers/header';
 
@@ -30,12 +30,20 @@ const ReporterDetailsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [reporter, setReporter] = useState(null);
-  const [stats, setStats] = useState({
-    totalNews: 0,
-    pendingNews: 0,
-    verifiedNews: 0,
-    rejectedNews: 0,
-  });
+ const [stats, setStats] = useState({
+    today: {
+        "Total News": 0,
+        "Pending News": 0,
+        "Published News": 0,
+        "Rejected News": 0
+    },
+    total: {
+        "Total News": 0,
+        "Pending News": 0,
+        "Published News": 0,
+        "Rejected News": 0
+    }
+});
   const [toast, setToast] = useState(null);
   const [alertMessage, setAlertMessage] = useState('');
   const [showCallAlert, setShowCallAlert] = useState(false);
@@ -46,13 +54,13 @@ const ReporterDetailsScreen = () => {
     try {
       setLoading(true);
       
-      const reporterResponse = await userAPI.getReporterDetails(reporterId);
-      
-      if (reporterResponse.success) {
+      const reporterResponse = await apiService.getReporterById(reporterId,2);
+      console.log(reporterResponse)
+      if (reporterResponse.error==false) {
         setReporter(reporterResponse.data);
         
-        const statsResponse = await userAPI.getReporterStats(reporterId);
-        if (statsResponse.success) {
+        const statsResponse = await apiService.getDashboardStats(reporterId,2);
+        if (statsResponse.error==false) {
           setStats(statsResponse.data);
         }
       } else {
@@ -370,42 +378,92 @@ const ReporterDetailsScreen = () => {
 
         {/* News Statistics */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>News Statistics</Text>
-          
-          <View style={styles.statsGrid}>
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => handleViewNewsByStatus('all')}
-            >
-              <Text style={styles.statNumber}>{stats.totalNews || 0}</Text>
-              <Text style={styles.statLabel}>Total News</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => handleViewNewsByStatus('pending')}
-            >
-              <Text style={[styles.statNumber, { color: pallette.gold }]}>{stats.pendingNews || 0}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => handleViewNewsByStatus('verified')}
-            >
-              <Text style={[styles.statNumber, { color: pallette.primary }]}>{stats.verifiedNews || 0}</Text>
-              <Text style={styles.statLabel}>Verified</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => handleViewNewsByStatus('rejected')}
-            >
-              <Text style={[styles.statNumber, { color: pallette.red }]}>{stats.rejectedNews || 0}</Text>
-              <Text style={styles.statLabel}>Rejected</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+  <Text style={styles.sectionTitle}>Total News Statistics</Text>
+  
+  <View style={styles.statsGrid}>
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('all')}
+    >
+      <Text style={styles.statNumber}>{stats.total["Total News"] || 0}</Text>
+      <Text style={styles.statLabel}>Total News</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('pending')}
+    >
+      <Text style={[styles.statNumber, { color: pallette.gold }]}>
+        {stats.total["Pending News"] || 0}
+      </Text>
+      <Text style={styles.statLabel}>Pending</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('verified')}
+    >
+      <Text style={[styles.statNumber, { color: pallette.primary }]}>
+        {stats.total["Published News"] || 0}
+      </Text>
+      <Text style={styles.statLabel}>Verified</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('rejected')}
+    >
+      <Text style={[styles.statNumber, { color: pallette.red }]}>
+        {stats.total["Rejected News"] || 0}
+      </Text>
+      <Text style={styles.statLabel}>Rejected</Text>
+    </TouchableOpacity>
+  </View>
+</View>
+  <View style={styles.section}>
+  <Text style={styles.sectionTitle}>Today News Statistics</Text>
+  
+  <View style={styles.statsGrid}>
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('all')}
+    >
+      <Text style={styles.statNumber}>{stats.today["Total News"] || 0}</Text>
+      <Text style={styles.statLabel}>Total News</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('pending')}
+    >
+      <Text style={[styles.statNumber, { color: pallette.gold }]}>
+        {stats.today["Pending News"] || 0}
+      </Text>
+      <Text style={styles.statLabel}>Pending</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('verified')}
+    >
+      <Text style={[styles.statNumber, { color: pallette.primary }]}>
+        {stats.today["Published News"] || 0}
+      </Text>
+      <Text style={styles.statLabel}>Verified</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.statCard}
+      onPress={() => handleViewNewsByStatus('rejected')}
+    >
+      <Text style={[styles.statNumber, { color: pallette.red }]}>
+        {stats.today["Rejected News"] || 0}
+      </Text>
+      <Text style={styles.statLabel}>Rejected</Text>
+    </TouchableOpacity>
+  </View>
+</View>
+        
 
         {/* Action Buttons */}
         <TouchableOpacity 
