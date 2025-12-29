@@ -44,15 +44,15 @@ const LoginScreen = () => {
     try {
       
      const response= await apiService.login(username)
-     console.log(response);
+     console.log('api',response);
       if (response.error==false) {
-        await login(
-          response.data
-        )
         setToast({
           message: 'Login successful!',
           type: 'success'
         });
+         await login(
+          response.data
+        )
         // Navigation would typically happen after successful login
       } else {
         setToast({

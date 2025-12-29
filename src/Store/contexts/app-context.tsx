@@ -3,8 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
   id: number;
-  token?: string;
+  name?:string;
+  // token?: string;
   role?: string;
+  email?:string;
+  mobileNumber?:string;
 }
 
 interface AppContextType {

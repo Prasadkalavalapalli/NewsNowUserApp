@@ -24,7 +24,7 @@ const AccountTabs: React.FC = () => {
   const { user, logout } = useAppContext();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
+ console.log(user)
   /**
    * Fetch user details on component mount
    */
@@ -118,7 +118,7 @@ const AccountTabs: React.FC = () => {
     
     if (userData) {
       return {
-        username: userData.name || userData.username || "Guest User",
+        username: user.name || userData.username || "Guest User",
         phoneNumber: userData.mobileNumber || userData.phone || ""
       };
     }

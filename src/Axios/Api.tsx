@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==================== AXIOS CONFIGURATION ====================
 const apiClient = axios.create({
-  baseURL: ' https://530c7fc00442.ngrok-free.app/api/',
+  baseURL: ' https://7eecf6608bcf.ngrok-free.app/api/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -104,7 +104,7 @@ export const apiService = {
 
   login: async (email) => {
     try {
-      const response = await apiClient.post('auth/login', { email});
+      const response = await apiClient.post('auth/userlogin', { mobileNumber:email});
       console.log('Login response:', response);
       
       // Store token if received
@@ -154,8 +154,10 @@ export const apiService = {
   },
 
   RegisterUser: async (profileData) => {
+    console.log(profileData)
     try {
-      const response = await apiClient.put(`/users/profile`, profileData);
+      const response = await apiClient.post(`auth/userregister`, profileData);
+      console.log(response);
       return response;
     } catch (error) {
       return error;

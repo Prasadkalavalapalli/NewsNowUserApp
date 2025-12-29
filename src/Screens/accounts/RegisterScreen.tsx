@@ -62,9 +62,9 @@ const RegisterScreen: React.FC = () => {
   
   // State
   const [formData, setFormData] = useState({
-    username: '',
+   name: '',
     email: '',
-    mobile: '',
+    mobileNumber: '',
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -84,12 +84,16 @@ const RegisterScreen: React.FC = () => {
     try {
       const response = await apiService.RegisterUser(formData);    
       if (response.error === false) {
-        Toast.show({
+         Toast.show({
           type: 'success',
           text1: 'Registered Successfully',
           text2: 'Thank You for Registering. Please continue to Login',
+          visibilityTime: 2000,
+          onHide: () => {
+            // This will be called after the toast disappears
+            navigation.goBack();
+          }
         });
-        navigation.goBack(); // Navigate back to login
       } else {
         throw new Error(response.message || 'Registration failed');
       }
@@ -113,9 +117,9 @@ const RegisterScreen: React.FC = () => {
 
   // Form validation
   const validateForm = (): string | null => {
-    const { username, email, mobile } = formData;
+    const { name, email, mobileNumber } = formData;
     
-    if (!username.trim() || username.length < 3) {
+    if (!name.trim() || name.length < 3) {
       return 'Please enter a valid name (min 3 characters)';
     }
     
@@ -123,8 +127,8 @@ const RegisterScreen: React.FC = () => {
       return 'Please enter a valid email address';
     }
     
-    const cleanMobile = mobile.replace(/\D/g, '');
-    if (!mobile || cleanMobile.length < 10) {
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+    if (!mobileNumber || cleanMobile.length < 10) {
       return 'Please enter a valid 10-digit mobile number';
     }
     
@@ -176,8 +180,8 @@ const RegisterScreen: React.FC = () => {
         {/* Form Fields */}
         <InputField
           label="Name"
-          value={formData.username}
-          onValueChange={(val) => updateField('username', val)}
+          value={formData.name}
+          onValueChange={(val) => updateField('name', val)}
           placeholder="Enter your name"
         />
         
@@ -191,8 +195,8 @@ const RegisterScreen: React.FC = () => {
         
         <InputField
           label="Mobile Number"
-          value={formData.mobile}
-          onValueChange={(val) => updateField('mobile', val)}
+          value={formData.mobileNumber}
+          onValueChange={(val) => updateField('mobileNumber', val)}
           placeholder="Enter phone number"
           keyboardType="phone-pad"
           maxLength={10}
