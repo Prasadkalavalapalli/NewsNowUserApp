@@ -130,76 +130,6 @@ const HelpScreen: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // Update ticket status
-  const handleUpdateTicketStatus = async (ticket: Ticket) => {
-    try {
-      const res = await apiService.updateTicketStatus({
-        userId: user.userId,
-        ticketId: ticket.id,
-        status: 'RESOLVED'
-      });
-
-      if (res.error === false) {
-        setTickets(prev => prev.map(t => 
-          t.id === ticket.id ? { ...t, status: 'RESOLVED' } : t
-        ));
-        
-        Toast.show({
-          type: 'success',
-          text1: 'Ticket Updated',
-          text2: `Ticket #TKT-${ticket.id} has been resolved`,
-        });
-      } else {
-        throw new Error(res.message || 'Failed to update ticket');
-      }
-    } catch (error: any) {
-      console.error("Error updating ticket:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Update Failed',
-        text2: error.message || 'Failed to update ticket',
-      });
-    }
-  };
-
-  // Show confirmation alert for ticket update
-  const showUpdateConfirmation = (ticket: Ticket) => {
-    setAlertComponent(
-      <AlertMessage
-        message={`Resolve Ticket TKT-${ticket.id}?`}
-        showConfirm={true}
-        onClose={async (confirmed: boolean) => {
-          setAlertComponent(null);
-          if (confirmed) {
-            await handleUpdateTicketStatus(ticket);
-          }
-        }}
-      />
-    );
-  };
-
-  // Handle email reply
-  const handleEmailReply = (email: string) => {
-    if (!email) {
-      Toast.show({
-        type: 'error',
-        text1: 'Email Failed',
-        text2: 'Email not available',
-      });
-      return;
-    }
-
-    const emailUrl = `mailto:${email}`;
-    Linking.openURL(emailUrl).catch(() => {
-      Toast.show({
-        type: 'error',
-        text1: 'Email Failed',
-        text2: 'Unable to open email app',
-      });
-    });
-  };
-
   // Helper functions
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
@@ -270,26 +200,7 @@ const HelpScreen: React.FC = () => {
           <Text style={styles.createdDate}>
             Created: {formatDate(item.createdAt)}
           </Text>
-        )}
-        
-        {/* Admin Actions */}
-        {showActions && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.rejectButton]}
-              onPress={() => handleEmailReply(item.email)}
-            >
-              <Text style={styles.rejectButtonText}>Reply</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.actionButton, styles.approveButton]}
-              onPress={() => showUpdateConfirmation(item)}
-            >
-              <Text style={styles.approveButtonText}>Mark as Solved</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        )}     
       </View>
     );
   };

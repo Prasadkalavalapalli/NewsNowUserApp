@@ -7,23 +7,13 @@ import { useAppContext } from '../Store/contexts/app-context';
 import { pallette } from '../Screens/helpers/colors';
 import { h, w } from '../constants/dimensions';
 import { medium } from '../Screens/helpers/fonts';
-import HomeScreen from '../Screens/home screens/home';
-import NewsDashboard from '../Screens/news/NewsDashboard';
 import HelpScreen from '../Screens/help screens/help';
 import AccountTabs from '../Screens/accounts/account';
 import ReporterRegistration from '../Screens/Reporter Screens/ReporterRegister';
-import ReporterList from '../Screens/Reporter Screens/ReporterList';
-import ReporterDetailsScreen from '../Screens/Reporter Screens/ReporterDetailsScreen';
-import NewsDetails from '../Screens/news screen/newsdetail';
 import NewsViewScreen from '../Screens/news screen/newsview';
 import PrivacyPolicy from '../Screens/accounts/PrivacyPolicy';
 import AboutNewsNow from '../Screens/accounts/AboutNewsNow';
-import LoginScreen from '../Screens/login screens/login-screen';
-import EditPendingNews from '../Screens/news/EditPendingNews';
-import UploadScreen from '../Screens/news/UploadScreen';
 import ProfileScreen from '../Screens/accounts/profile-screen';
-
-
 
 
 // Define your strings (create a strings file or define here)
