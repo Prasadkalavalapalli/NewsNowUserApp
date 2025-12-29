@@ -102,9 +102,9 @@ export const apiService = {
     }
   },
 
-  login: async (email, password) => {
+  login: async (email) => {
     try {
-      const response = await apiClient.post('auth/login', { email, password });
+      const response = await apiClient.post('auth/login', { email});
       console.log('Login response:', response);
       
       // Store token if received
@@ -153,6 +153,14 @@ export const apiService = {
     }
   },
 
+  RegisterUser: async (profileData) => {
+    try {
+      const response = await apiClient.put(`/users/profile`, profileData);
+      return response;
+    } catch (error) {
+      return error;
+    }
+  },
   updateProfile: async (userId, profileData) => {
     try {
       const response = await apiClient.put(`/users/${userId}/profile`, profileData);

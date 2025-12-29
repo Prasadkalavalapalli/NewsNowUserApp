@@ -17,7 +17,6 @@ import { adjust, h, w } from '../../constants/dimensions';
 import ToastMessage from '../helpers/ToastMessage';
 import AlertMessage from '../helpers/alertmessage';
 import { useAppContext } from '../../Store/contexts/app-context';
-import ReporterRegistration from '../Reporter Screens/ReporterRegister';
 import { useNavigation } from '@react-navigation/native';
 import apiService from '../../Axios/Api';
 
@@ -28,7 +27,6 @@ const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [toast, setToast] = useState(null);
   
@@ -37,17 +35,7 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     // Validation
     if (!username.trim()) {
-      setAlertMessage('Please enter your username/email');
-      return;
-    }
-
-    if (!password.trim()) {
-      setAlertMessage('Please enter your password');
-      return;
-    }
-
-    if (password.length < 6) {
-      setAlertMessage('Password must be at least 6 characters');
+      setAlertMessage('Please enter your email/Mobile Number');
       return;
     }
 
@@ -55,7 +43,7 @@ const LoginScreen = () => {
 
     try {
       
-     const response= await apiService.login(username,password)
+     const response= await apiService.login(username)
      console.log(response);
       if (response.error==false) {
         await login(
@@ -68,10 +56,10 @@ const LoginScreen = () => {
         // Navigation would typically happen after successful login
       } else {
         setToast({
-          message: response.message,
+          message: response.message||'Login failed. Please try again.',
           type: 'error'
         });
-        setAlertMessage('Invalid username or password');
+        // setAlertMessage('Invalid Email or Mobile Number');
       }
     } catch (error) {
       setAlertMessage('Login failed. Please try again.');
@@ -83,17 +71,13 @@ const LoginScreen = () => {
 
   const handleRegister = () => {
     // Navigate to registration screen
-     navigation.navigate(ReporterRegistration)
+     navigation.navigate('RegisterScreen')
+  };
+  const handleRequest= () => {
+    // Navigate to registration screen
+     navigation.navigate('ReporterRegistration')
   };
 
-  const handleForgotPassword = () => {
-    // Navigate to forgot password screen
-     setToast({
-      message: `ForgotPassword login coming soon!`,
-      type: 'info'
-    });
-    navigation.navigate('ForgotPassword');
-  };
 
   const handleQuickLogin = (platform) => {
     setToast({
@@ -137,7 +121,7 @@ const LoginScreen = () => {
             </View>
             <TextInput
               style={styles.input}
-              placeholder="Username or Email"
+              placeholder="Email or Mobile Number"
               placeholderTextColor={pallette.grey}
               value={username}
               onChangeText={setUsername}
@@ -148,41 +132,7 @@ const LoginScreen = () => {
             />
           </View>
 
-          {/* Password Input */}
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputIcon}>
-              <Icon name="lock" size={20} color={pallette.grey} />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={pallette.grey}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              editable={!loading}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
-              disabled={loading}
-            >
-              <Icon 
-                name={showPassword ? 'eye' : 'eye-slash'} 
-                size={20} 
-                color={pallette.grey} 
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Forgot Password */}
-          <TouchableOpacity 
-            style={styles.forgotPasswordButton}
-            onPress={handleForgotPassword}
-            disabled={loading}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          
 
           {/* Login Button */}
           <TouchableOpacity
@@ -237,6 +187,15 @@ const LoginScreen = () => {
               disabled={loading}
             >
               <Text style={styles.registerLink}>Sign up</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.registerContainer}>
+            <Text style={styles.registerText}>Join As Reporter..? </Text>
+            <TouchableOpacity 
+              onPress={handleRequest}
+              disabled={loading}
+            >
+              <Text style={styles.registerLink}>Request</Text>
             </TouchableOpacity>
           </View>
         </View>

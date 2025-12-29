@@ -37,12 +37,12 @@ const ReporterHomeStack = () => (
 );
 const UserProfile= () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="HelpScreen" component={HelpScreen} />
-    <Stack.Screen name="AccountTabs" component={AccountTabs} />
-    <Stack.Screen name="ReporterRegistration" component={ReporterRegistration}/>
-      <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
-       <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
-       <Stack.Screen name='ProfileScreen'component={ProfileScreen}/>
+        <Stack.Screen name="AccountTabs" component={AccountTabs} />
+        <Stack.Screen name="ReporterRegistration" component={ReporterRegistration}/>
+        <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
+        <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
+        <Stack.Screen name='ProfileScreen'component={ProfileScreen}/>
+        <Stack.Screen name="HelpScreen" component={HelpScreen} />
   </Stack.Navigator>
 );
 
@@ -53,14 +53,7 @@ const role = user?.role?.toLowerCase();
 console.log(role);
   // Define tabs based on user role (example)
   const userTabs = [  
-    {
-      name: strings.UserProfile,
-      component: UserProfile,
-      title: strings.UserProfile,
-      activeIcon: 'account-circle',
-      inactiveIcon: 'account-circle-outline',
-      show: user?.role === 'user', // Show for all users
-    },
+  
     
     {
       name: strings.ReporterHome,
@@ -68,6 +61,14 @@ console.log(role);
       title: strings.ReporterHome,
       activeIcon: 'book-open-page-variant',
       inactiveIcon: 'book-open-page-variant-outline',
+      show: true, // Show for all users
+    },
+      {
+      name: strings.UserProfile,
+      component: UserProfile,
+      title: strings.UserProfile,
+      activeIcon: 'account-circle',
+      inactiveIcon: 'account-circle-outline',
       show: true, // Show for all users
     },
    
