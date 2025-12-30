@@ -212,7 +212,7 @@ const NeedHelpPopup: React.FC<Props> = ({ visible, onClose, onSubmit }) => {
                 <Text style={styles.label}>Email Address</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="your@email.com (optional)"
+                  placeholder="email@gmail.com "
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"

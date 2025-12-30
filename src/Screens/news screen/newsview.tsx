@@ -41,7 +41,7 @@ const PRIORITIES = ['BREAKING', 'FLASH', 'NORMAL'];
 const NewsViewScreen = () => {
   // Refs
   const flatListRef = useRef(null);
-  const commentInputRef = useRef(null);
+  // const commentInputRef = useRef(null);
   
   // State
   const [loading, setLoading] = useState(true);
@@ -371,7 +371,7 @@ const NewsViewScreen = () => {
       // Refresh comments
       await loadComments(currentNewsId);
       
-      commentInputRef.current?.blur();
+      // commentInputRef.current?.blur();
       ErrorMessage.show('Comment added successfully');
     } catch (error) {
       ErrorMessage.show('Failed to add comment');
@@ -543,12 +543,13 @@ const NewsViewScreen = () => {
         
         <View style={styles.addCommentContainer}>
           <TextInput
-            ref={commentInputRef}
+            // ref={commentInputRef}
             style={styles.commentInput}
             placeholder="Write a comment..."
             value={newComment}
-            onChangeText={setNewComment}
-            multiline
+            onChangeText={setNewComment}         
+            keyboardType='email-address'
+            // multiline
             placeholderTextColor={pallette.grey}
           />
           <TouchableOpacity 
@@ -562,6 +563,7 @@ const NewsViewScreen = () => {
       </View>
     );
   };
+
 
   // Action Bar Component
   const ActionBar = ({ newsId }) => (
@@ -651,14 +653,16 @@ const NewsViewScreen = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.contentContainer}>
+      <View style={styles.contentContainer}>
         <Text style={styles.headline}>{item.headline}</Text>
+        <View style={styles.infoRow}>
         <Text style={styles.time}>{formatTime(item.publishedAt)}</Text>
-        <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text>
+        <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text></View>
+        <ScrollView>
         <Text style={styles.fullContent}>{item.content}</Text>
         <View style={styles.contentSpacer} />
       </ScrollView>
-
+      </View>
       <ActionBar newsId={item.id} />
     </View>
   );
@@ -708,15 +712,6 @@ const NewsViewScreen = () => {
             index,
           })}
         />
-
-        {/* <NavigationDots /> */}
-        
-        {/* {!showComments && (
-          <View style={styles.swipeHint}>
-            <Icon name="arrows-left-right" size={16} color={pallette.black} />
-            <Text style={styles.swipeHintText}>Swipe for more news</Text>
-          </View>
-        )} */}
 
         <CommentsPanel />
         <FilterModal />
@@ -773,17 +768,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     
   },
-  filterButton: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(203, 18, 18, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // filterButton: {
+  //   position: 'absolute',
+  //   top: 40,
+  //   left: 20,
+  //   width: 40,
+  //   height: 40,
+  //   borderRadius: 20,
+  //   backgroundColor: 'rgba(203, 18, 18, 0.5)',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
   filterBadge: {
     position: 'absolute',
     top: 5,
@@ -817,24 +812,28 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   headline: {
-    fontSize: 24,
+    fontSize: 18,
     fontFamily: bold,
     color: pallette.black,
     marginBottom: 8,
     lineHeight: 32,
   },
-  time: {
-    fontSize: 14,
-    fontFamily: medium,
-    color: pallette.grey,
-    marginBottom: 4,
-  },
-  newsType: {
-    fontSize: 14,
-    fontFamily: medium,
-    color: pallette.primary,
-    marginBottom: 16,
-  },
+infoRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 16,
+},
+time: {
+  fontSize: 14,
+  fontFamily: medium,
+  color: pallette.grey,
+},
+newsType: {
+  fontSize: 14,
+  fontFamily: medium,
+  color: pallette.primary,
+},
   fullContent: {
     fontSize: 15,
     fontFamily: regular,
@@ -1069,22 +1068,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   filterButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: pallette.lightgrey,
-  },
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'space-between',
+},
+filterButton: {
+  width: (SCREEN_WIDTH - 60) / 3, // 60 = total horizontal padding
+  paddingVertical: 12,
+  marginBottom: 12,
+  borderRadius: 8,
+  backgroundColor: pallette.lightgrey,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
   filterButtonActive: {
     backgroundColor: pallette.primary,
   },
   filterButtonText: {
-    fontSize: 14,
-    fontFamily: medium,
+    fontSize: 12,
+    fontFamily: semibold,
     color: pallette.darkgrey,
   },
   filterButtonTextActive: {

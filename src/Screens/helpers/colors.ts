@@ -5,7 +5,7 @@ export const pallette = {
     darkgrey: '#9E9E9E',
     lightgrey: '#FAFAFA',
     mediumgrey: '#D8D8D8',
-    primary: '#4AAF57',
+    primary: '#D30101',
     secondary: '#12D18E14',
     l1: '#3878BB',
     l2: '#00A5CD',
