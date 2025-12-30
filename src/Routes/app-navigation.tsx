@@ -53,8 +53,7 @@ const role = user?.role?.toLowerCase();
 console.log(role);
   // Define tabs based on user role (example)
   const userTabs = [  
-  
-    
+ 
     {
       name: strings.ReporterHome,
       component: ReporterHomeStack,

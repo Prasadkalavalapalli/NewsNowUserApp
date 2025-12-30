@@ -4,10 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==================== AXIOS CONFIGURATION ====================
 const apiClient = axios.create({
-  baseURL: ' https://7eecf6608bcf.ngrok-free.app/api/',
+  baseURL:  'https://50db0717c25c.ngrok-free.app/api/',
   headers: {
-    'Content-Type': 'application/json',
-  },
+            'Content-Type': 'application/json',
+           },
   timeout: 10000, // 10 second timeout
 });
 
@@ -208,6 +208,103 @@ createTicket: async (data) => {
       return error;
     }
   },
+
+
+  // ===== NEWS INTERACTION APIS =====
+
+// Toggle like for a news
+toggleLike: async (newsId, userId) => {
+  try {
+    const response = await apiClient.post(`news/${newsId}/like/${userId}`);
+    return response;
+  } catch (error) {
+    console.error("Toggle like error:", error);
+    return error;
+  }
+},
+
+// Check if user liked a news
+checkLikeStatus: async (newsId, userId) => {
+  try {
+    const response = await apiClient.get(`news/likecheck?userId=${userId}&newsId=${newsId}`);
+    return response;
+  } catch (error) {
+    console.error("Check like status error:", error);
+    return error;
+  }
+},
+
+// Add a comment to news
+addComment: async (newsId, userId, comment) => {
+  try {
+    const response = await apiClient.post(`news/${newsId}/comment/${userId}`,comment);
+    return response;
+  } catch (error) {
+    console.error("Add comment error:", error);
+    return error;
+  }
+},
+
+// Get comments for a news
+getComments: async (newsId) => {
+  try {
+    const response = await apiClient.get(`news/${newsId}/comments`);
+    return response;
+  } catch (error) {
+    console.error("Get comments error:", error);
+    return error;
+  }
+},
+
+// Share a news
+shareNews: async (newsId, userId) => {
+  try {
+    const response = await apiClient.post(`news/${newsId}/share/${userId}`);
+    return response;
+  } catch (error) {
+    console.error("Share news error:", error);
+    return error;
+  }
+},
+
+// Get counts (likes, comments, shares) for news
+getCounts: async (newsId) => {
+  try {
+    const response = await apiClient.get(`news/${newsId}/counts`);
+    return response;
+  } catch (error) {
+    console.error("Get counts error:", error);
+    return error;
+  }
+},
+
+// Get published news with optional filters
+getPublishedNews: async (filters = {}) => {
+  try {
+    // Build query parameters
+    let queryString = '';
+    const params = [];
+    
+    if (filters.category) params.push(`category=${encodeURIComponent(filters.category)}`);
+    if (filters.newsType) params.push(`newsType=${encodeURIComponent(filters.newsType)}`);
+    if (filters.priority) params.push(`priority=${encodeURIComponent(filters.priority)}`);
+    if (filters.district) params.push(`district=${encodeURIComponent(filters.district)}`);
+    
+    // Add pagination if needed (optional enhancement)
+    if (filters.page) params.push(`page=${filters.page}`);
+    if (filters.limit) params.push(`limit=${filters.limit}`);
+    
+    if (params.length > 0) {
+      queryString = `?${params.join('&')}`;
+    }
+    
+    const response = await apiClient.get(`/admin/news/published${queryString}`);
+    return response;
+  } catch (error) {
+    console.error("Get published news error:", error);
+    return error;
+  }
+},
 
   // ===== NOTIFICATIONS =====
   // getNotifications: async (userId) => {
