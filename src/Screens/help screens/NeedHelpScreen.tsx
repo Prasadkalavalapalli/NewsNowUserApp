@@ -87,6 +87,7 @@ const NeedHelpPopup: React.FC<Props> = ({ visible, onClose, onSubmit }) => {
               email: email.trim() || undefined 
             });
             resetForm();
+            onClose();
             Toast.show({
               type: 'success',
               text1: 'Ticket Submitted',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,7 @@ import {
   Platform,
   Alert,
   Share,
-  Modal,
-  TouchableWithoutFeedback
+  Modal
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { pallette } from '../helpers/colors';
@@ -25,7 +24,6 @@ import Loader from '../helpers/loader';
 import apiService from '../../Axios/Api';
 import { useAppContext } from '../../Store/contexts/app-context';
 import ErrorMessage from '../helpers/errormessage';
-
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -38,10 +36,253 @@ const CATEGORIES = [
 const NEWS_TYPES = ['LOCAL', 'NATIONAL', 'INTERNATIONAL'];
 const PRIORITIES = ['BREAKING', 'FLASH', 'NORMAL'];
 
+// Comments Panel Component (moved outside to prevent re-renders)
+const CommentsPanel = React.memo(({ 
+  showComments, 
+  toggleComments, 
+  currentNewsId, 
+  comments, 
+  counts, 
+  newComment, 
+  setNewComment, 
+  submitComment 
+}) => {
+  const commentInputRef = useRef(null);
+
+  if (!showComments || !comments[currentNewsId]) return null;
+
+  return (
+    <View style={styles.commentsContainer}>
+      <View style={styles.commentsHeader}>
+        <Text style={styles.commentsTitle}>
+          Comments ({counts[currentNewsId]?.comments || 0})
+        </Text>
+        <TouchableOpacity onPress={toggleComments}>
+          <Icon name="xmark" size={20} color={pallette.grey} />
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.addCommentContainer}>
+        <TextInput
+          ref={commentInputRef}
+          style={styles.commentInput}
+          placeholder="Write a comment..."
+          value={newComment}
+          onChangeText={setNewComment}
+          keyboardType="default"
+          multiline={true}
+          placeholderTextColor={pallette.grey}
+          blurOnSubmit={false}
+          onSubmitEditing={submitComment}
+        />
+        <TouchableOpacity 
+          style={[styles.submitButton, !newComment.trim() && styles.submitButtonDisabled]}
+          onPress={submitComment}
+          disabled={!newComment.trim()}
+        >
+          <Icon name="paper-plane" size={18} color={pallette.white} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView 
+        style={styles.commentsList}
+        keyboardShouldPersistTaps="handled"
+      >
+        {comments[currentNewsId].map((item) => (
+          <View key={item.id} style={styles.commentItem}>
+            <View style={styles.commentAvatar}>
+              <Text style={styles.commentAvatarText}>
+                {item.user.charAt(0)}
+              </Text>
+            </View>
+            <View style={styles.commentContent}>
+              <View style={styles.commentHeader}>
+                <Text style={styles.commentUserName}>{item.user}</Text>
+                <Text style={styles.commentTime}>{item.time}</Text>
+              </View>
+              <Text style={styles.commentText}>{item.text}</Text>
+            </View>
+          </View>
+        ))}
+        
+        {comments[currentNewsId].length === 0 && (
+          <View style={styles.noCommentsContainer}>
+            <Icon name="comment-slash" size={40} color={pallette.grey} />
+            <Text style={styles.noCommentsText}>No comments yet</Text>
+          </View>
+        )}
+      </ScrollView>
+      
+      
+    </View>
+  );
+});
+
+// Filter Modal Component (moved outside to prevent re-renders)
+const FilterModal = React.memo(({ 
+  showFilterModal, 
+  setShowFilterModal, 
+  selectedCategory, 
+  setSelectedCategory, 
+  selectedNewsType, 
+  setSelectedNewsType, 
+  selectedPriority, 
+  setSelectedPriority, 
+  clearFilters, 
+  applyFilters 
+}) => {
+  const modalContentRef = useRef(null);
+
+  const handleOverlayPress = (event) => {
+    // Check if the press was on the overlay (not the modal content)
+    if (modalContentRef.current && 
+        !modalContentRef.current.measure) {
+      return;
+    }
+    
+    modalContentRef.current.measure((fx, fy, width, height, px, py) => {
+      if (event.nativeEvent.pageY < py) {
+        setShowFilterModal(false);
+      }
+    });
+  };
+
+  return (
+    <Modal
+      visible={showFilterModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowFilterModal(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={handleOverlayPress}
+      >
+        <View 
+          ref={modalContentRef}
+          style={styles.modalContent}
+          onStartShouldSetResponder={() => true}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filter News</Text>
+            <TouchableOpacity 
+              onPress={() => setShowFilterModal(false)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="xmark" size={20} color={pallette.black} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filterOptions}>
+            {/* Category Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Category</Text>
+              <View style={styles.filterButtons}>
+                {CATEGORIES.map(category => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.filterButton,
+                      selectedCategory === category && styles.filterButtonActive
+                    ]}
+                    onPress={() => setSelectedCategory(
+                      selectedCategory === category ? '' : category
+                    )}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      selectedCategory === category && styles.filterButtonTextActive
+                    ]}>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* News Type Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>News Type</Text>
+              <View style={styles.filterButtons}>
+                {NEWS_TYPES.map(type => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.filterButton,
+                      selectedNewsType === type && styles.filterButtonActive
+                    ]}
+                    onPress={() => setSelectedNewsType(
+                      selectedNewsType === type ? '' : type
+                    )}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      selectedNewsType === type && styles.filterButtonTextActive
+                    ]}>
+                      {type}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Priority Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Priority</Text>
+              <View style={styles.filterButtons}>
+                {PRIORITIES.map(priority => (
+                  <TouchableOpacity
+                    key={priority}
+                    style={[
+                      styles.filterButton,
+                      selectedPriority === priority && styles.filterButtonActive
+                    ]}
+                    onPress={() => setSelectedPriority(
+                      selectedPriority === priority ? '' : priority
+                    )}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      selectedPriority === priority && styles.filterButtonTextActive
+                    ]}>
+                      {priority}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.clearButton]}
+              onPress={clearFilters}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearButtonText}>Clear All</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.applyButton]}
+              onPress={applyFilters}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
+
 const NewsViewScreen = () => {
   // Refs
   const flatListRef = useRef(null);
-  // const commentInputRef = useRef(null);
   
   // State
   const [loading, setLoading] = useState(true);
@@ -159,7 +400,7 @@ const NewsViewScreen = () => {
         const formattedComments = response.data.map(comment => ({
           id: comment.id,
           userId: comment.userId,
-          user: `User ${comment.userId}`,
+          user: `${comment.userName}`,
           text: comment.comment,
           time: formatTime(comment.createdAt),
           createdAt: comment.createdAt
@@ -231,15 +472,15 @@ const NewsViewScreen = () => {
   const currentNews = newsList[currentIndex] || {};
   const currentNewsId = currentNews.id;
 
-  // Handle swipe
-  const handleSwipe = (event) => {
+  // Handle swipe - useCallback to prevent unnecessary re-renders
+  const handleSwipe = useCallback((event) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(contentOffsetX / SCREEN_WIDTH);
     setCurrentIndex(index);
     setShowComments(false);
-  };
+  }, []);
 
-  const goToNews = (index) => {
+  const goToNews = useCallback((index) => {
     if (index >= 0 && index < newsList.length) {
       flatListRef.current?.scrollToIndex({
         index,
@@ -248,14 +489,14 @@ const NewsViewScreen = () => {
       setCurrentIndex(index);
       setShowComments(false);
     }
-  };
+  }, [newsList.length]);
 
   // Filter functions
-  const handleFilterPress = () => {
+  const handleFilterPress = useCallback(() => {
     setShowFilterModal(true);
-  };
+  }, []);
 
-  const applyFilters = async () => {
+  const applyFilters = useCallback(async () => {
     try {
       const filters = {};
       if (selectedCategory) filters.category = selectedCategory;
@@ -269,19 +510,19 @@ const NewsViewScreen = () => {
     } catch (error) {
       ErrorMessage.show('Failed to apply filters');
     }
-  };
+  }, [selectedCategory, selectedNewsType, selectedPriority]);
 
-  const clearFilters = async () => {
+  const clearFilters = useCallback(async () => {
     setSelectedCategory('');
     setSelectedNewsType('');
     setSelectedPriority('');
     setFilterApplied(false);
     await loadPublishedNews();
     setShowFilterModal(false);
-  };
+  }, []);
 
   // Toggle like
-  const toggleLike = async () => {
+  const toggleLike = useCallback(async () => {
     if (!currentNewsId) return;
     
     try {
@@ -313,51 +554,69 @@ const NewsViewScreen = () => {
       }));
       ErrorMessage.show('Failed to update like');
     }
-  };
+  }, [currentNewsId, likes, userId]);
 
   // Toggle save
-  const toggleSave = () => {
+  const toggleSave = useCallback(() => {
     if (!currentNewsId) return;
     setSaved(prev => ({
       ...prev,
       [currentNewsId]: !prev[currentNewsId]
     }));
-  };
+  }, [currentNewsId]);
 
-  // Share news
-  const incrementShare = async () => {
-    if (!currentNewsId) return;
-    
-    try {
-      setCounts(prev => ({
-        ...prev,
-        [currentNewsId]: {
-          ...prev[currentNewsId],
-          shares: (prev[currentNewsId]?.shares || 0) + 1
-        }
-      }));
-
-      await apiService.shareNews(currentNewsId, userId);
-      
-      try {
-        await Share.share({
-          title: currentNews.headline,
-          message: `${currentNews.headline}\n\n${currentNews.content}`,
-        });
-      } catch (shareError) {
-        console.log('Share dialog cancelled');
+  // Share news with formatted template
+const incrementShare = useCallback(async () => {
+  if (!currentNewsId) return;
+  
+  try {
+    setCounts(prev => ({
+      ...prev,
+      [currentNewsId]: {
+        ...prev[currentNewsId],
+        shares: (prev[currentNewsId]?.shares || 0) + 1
       }
-    } catch (error) {
-      ErrorMessage.show('Failed to share news');
+    }));
+
+    await apiService.shareNews(currentNewsId, userId);
+    
+    // Create formatted news template
+    const shareTemplate = `
+📰 *${currentNews.headline}* 
+
+${currentNews.content.length > 300 ? currentNews.content.substring(0, 300) + '...' : currentNews.content}
+
+ *Category:* ${currentNews.category}
+ *Type:* ${currentNews.newsType}
+ *Priority:* ${currentNews.priority}
+*Published:* ${formatTime(currentNews.publishedAt)}
+
+📲 *Shared via NewsApp*
+👉 Read full story in the app for more details!
+
+#${currentNews.category} #NewsApp
+    `.trim();
+
+    try {
+      await Share.share({
+        title: currentNews.headline,
+        message: shareTemplate,
+        url: currentNews.mediaUrl || 'https://your-app-link.com' // Add your app link if available
+      });
+    } catch (shareError) {
+      console.log('Share dialog cancelled');
     }
-  };
+  } catch (error) {
+    ErrorMessage.show('Failed to share news');
+  }
+}, [currentNewsId, currentNews, userId]);
 
-  const toggleComments = () => {
-    setShowComments(!showComments);
-  };
+  const toggleComments = useCallback(() => {
+    setShowComments(prev => !prev);
+  }, []);
 
-  // Submit comment
-  const submitComment = async () => {
+  // Submit comment - useCallback to prevent re-renders
+  const submitComment = useCallback(async () => {
     if (!currentNewsId || newComment.trim() === '') return;
     
     const commentText = newComment.trim();
@@ -371,202 +630,16 @@ const NewsViewScreen = () => {
       // Refresh comments
       await loadComments(currentNewsId);
       
-      // commentInputRef.current?.blur();
       ErrorMessage.show('Comment added successfully');
     } catch (error) {
       ErrorMessage.show('Failed to add comment');
+      // Restore comment if failed
+      setNewComment(commentText);
     }
-  };
+  }, [currentNewsId, newComment, userId]);
 
-  // Filter Modal Component
-  const FilterModal = () => (
-    <Modal
-      visible={showFilterModal}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setShowFilterModal(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => setShowFilterModal(false)}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Filter News</Text>
-                <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                  <Icon name="xmark" size={20} color={pallette.black} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.filterOptions}>
-                {/* Category Filter */}
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterLabel}>Category</Text>
-                  <View style={styles.filterButtons}>
-                    {CATEGORIES.map(category => (
-                      <TouchableOpacity
-                        key={category}
-                        style={[
-                          styles.filterButton,
-                          selectedCategory === category && styles.filterButtonActive
-                        ]}
-                        onPress={() => setSelectedCategory(
-                          selectedCategory === category ? '' : category
-                        )}
-                      >
-                        <Text style={[
-                          styles.filterButtonText,
-                          selectedCategory === category && styles.filterButtonTextActive
-                        ]}>
-                          {category}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* News Type Filter */}
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterLabel}>News Type</Text>
-                  <View style={styles.filterButtons}>
-                    {NEWS_TYPES.map(type => (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.filterButton,
-                          selectedNewsType === type && styles.filterButtonActive
-                        ]}
-                        onPress={() => setSelectedNewsType(
-                          selectedNewsType === type ? '' : type
-                        )}
-                      >
-                        <Text style={[
-                          styles.filterButtonText,
-                          selectedNewsType === type && styles.filterButtonTextActive
-                        ]}>
-                          {type}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Priority Filter */}
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterLabel}>Priority</Text>
-                  <View style={styles.filterButtons}>
-                    {PRIORITIES.map(priority => (
-                      <TouchableOpacity
-                        key={priority}
-                        style={[
-                          styles.filterButton,
-                          selectedPriority === priority && styles.filterButtonActive
-                        ]}
-                        onPress={() => setSelectedPriority(
-                          selectedPriority === priority ? '' : priority
-                        )}
-                      >
-                        <Text style={[
-                          styles.filterButtonText,
-                          selectedPriority === priority && styles.filterButtonTextActive
-                        ]}>
-                          {priority}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-
-              {/* Action Buttons */}
-              <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  style={[styles.actionButton, styles.clearButton]}
-                  onPress={clearFilters}
-                >
-                  <Text style={styles.clearButtonText}>Clear All</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.actionButton, styles.applyButton]}
-                  onPress={applyFilters}
-                >
-                  <Text style={styles.applyButtonText}>Apply Filters</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-
-  // Comments Panel Component
-  const CommentsPanel = () => {
-    if (!showComments || !comments[currentNewsId]) return null;
-
-    return (
-      <View style={styles.commentsContainer}>
-        <View style={styles.commentsHeader}>
-          <Text style={styles.commentsTitle}>
-            Comments ({counts[currentNewsId]?.comments || 0})
-          </Text>
-          <TouchableOpacity onPress={toggleComments}>
-            <Icon name="xmark" size={20} color={pallette.grey} />
-          </TouchableOpacity>
-        </View>
-        
-        <ScrollView style={styles.commentsList}>
-          {comments[currentNewsId].map((item) => (
-            <View key={item.id} style={styles.commentItem}>
-              <View style={styles.commentAvatar}>
-                <Text style={styles.commentAvatarText}>
-                  {item.user.charAt(0)}
-                </Text>
-              </View>
-              <View style={styles.commentContent}>
-                <View style={styles.commentHeader}>
-                  <Text style={styles.commentUserName}>{item.user}</Text>
-                  <Text style={styles.commentTime}>{item.time}</Text>
-                </View>
-                <Text style={styles.commentText}>{item.text}</Text>
-              </View>
-            </View>
-          ))}
-          
-          {comments[currentNewsId].length === 0 && (
-            <View style={styles.noCommentsContainer}>
-              <Icon name="comment-slash" size={40} color={pallette.grey} />
-              <Text style={styles.noCommentsText}>No comments yet</Text>
-            </View>
-          )}
-        </ScrollView>
-        
-        <View style={styles.addCommentContainer}>
-          <TextInput
-            // ref={commentInputRef}
-            style={styles.commentInput}
-            placeholder="Write a comment..."
-            value={newComment}
-            onChangeText={setNewComment}         
-            keyboardType='email-address'
-            // multiline
-            placeholderTextColor={pallette.grey}
-          />
-          <TouchableOpacity 
-            style={[styles.submitButton, !newComment.trim() && styles.submitButtonDisabled]}
-            onPress={submitComment}
-            disabled={!newComment.trim()}
-          >
-            <Icon name="paper-plane" size={18} color={pallette.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
-
-
-  // Action Bar Component
-  const ActionBar = ({ newsId }) => (
+  // Action Bar Component - memoized to prevent re-renders
+  const ActionBar = React.memo(({ newsId }) => (
     <View style={styles.actionBar}>
       <TouchableOpacity style={styles.actionButton} onPress={toggleLike}>
         <Icon 
@@ -611,43 +684,24 @@ const NewsViewScreen = () => {
         <Text style={styles.actionText}>Save</Text>
       </TouchableOpacity>
     </View>
-  );
+  ));
 
-  // News Item Component
-  const NewsItem = ({ item }) => (
+  // News Item Component - memoized to prevent re-renders
+  const NewsItem = React.memo(({ item }) => (
     <View style={styles.newsContainer}>
       <View style={styles.imageContainer}>
         <Image source={{ uri: item.mediaUrl || 'https://picsum.photos/400/300' }} style={styles.newsImage} />
         <View style={styles.imageOverlay} />
         
-        {/* <TouchableOpacity style={styles.filterButton} onPress={handleFilterPress}>
-          <Icon name="filter" size={24} color={pallette.white} />
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={handleFilterPress}
+          activeOpacity={0.7}
+        >
+          <Icon name="filter" size={20} color={pallette.white} />
           {filterApplied && <View style={styles.filterBadge} />}
-        </TouchableOpacity> */}
-          <TouchableOpacity 
-        style={{
-          position: 'absolute',
-          top: 40,
-          left: 20,
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: pallette.primary,
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-        }} 
-        onPress={() => {
-          console.log('BUTTON CLICKED');
-          handleFilterPress();
-        }}
-      >
-        <Icon name="filter" size={20} color={pallette.white} />
-      </TouchableOpacity>
+        </TouchableOpacity>
 
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
         <View style={styles.categoryBadge}>
           <Text style={styles.categoryText}>{item.category}</Text>
         </View>
@@ -656,18 +710,17 @@ const NewsViewScreen = () => {
       <View style={styles.contentContainer}>
         <Text style={styles.headline}>{item.headline}</Text>
         <View style={styles.infoRow}>
-        <Text style={styles.time}>{formatTime(item.publishedAt)}</Text>
-        <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text></View>
-        <ScrollView>
-        <Text style={styles.fullContent}>{item.content}</Text>
-        <View style={styles.contentSpacer} />
-      </ScrollView>
+          <Text style={styles.time}>{formatTime(item.publishedAt)}</Text>
+          <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <Text style={styles.fullContent}>{item.content}</Text>
+          <View style={styles.contentSpacer} />
+        </ScrollView>
       </View>
       <ActionBar newsId={item.id} />
     </View>
-  );
-
- 
+  ));
 
   if (loading) return <Loader />;
 
@@ -678,11 +731,26 @@ const NewsViewScreen = () => {
         <View style={styles.emptyContainer}>
           <Icon name="newspaper" size={60} color={pallette.grey} />
           <Text style={styles.emptyText}>No news available</Text>
-          <TouchableOpacity style={styles.filterButtonEmpty} onPress={handleFilterPress}>
+          <TouchableOpacity 
+            style={styles.filterButtonEmpty} 
+            onPress={handleFilterPress}
+            activeOpacity={0.7}
+          >
             <Text style={styles.filterButtonEmptyText}>Try different filters</Text>
           </TouchableOpacity>
         </View>
-        <FilterModal />
+        <FilterModal 
+          showFilterModal={showFilterModal}
+          setShowFilterModal={setShowFilterModal}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedNewsType={selectedNewsType}
+          setSelectedNewsType={setSelectedNewsType}
+          selectedPriority={selectedPriority}
+          setSelectedPriority={setSelectedPriority}
+          clearFilters={clearFilters}
+          applyFilters={applyFilters}
+        />
       </SafeAreaView>
     );
   }
@@ -691,15 +759,15 @@ const NewsViewScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <KeyboardAvoidingView 
+      {/* <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+      > */}
         <FlatList
           ref={flatListRef}
           data={newsList}
-          renderItem={NewsItem}
+          renderItem={({ item }) => <NewsItem item={item} />}
           keyExtractor={(item) => item.id.toString()}
           horizontal
           pagingEnabled
@@ -711,11 +779,35 @@ const NewsViewScreen = () => {
             offset: SCREEN_WIDTH * index,
             index,
           })}
+          removeClippedSubviews={false}
+          windowSize={5}
+          maxToRenderPerBatch={3}
         />
 
-        <CommentsPanel />
-        <FilterModal />
-      </KeyboardAvoidingView>
+        <CommentsPanel 
+          showComments={showComments}
+          toggleComments={toggleComments}
+          currentNewsId={currentNewsId}
+          comments={comments}
+          counts={counts}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          submitComment={submitComment}
+        />
+        
+        <FilterModal 
+          showFilterModal={showFilterModal}
+          setShowFilterModal={setShowFilterModal}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedNewsType={selectedNewsType}
+          setSelectedNewsType={setSelectedNewsType}
+          selectedPriority={selectedPriority}
+          setSelectedPriority={setSelectedPriority}
+          clearFilters={clearFilters}
+          applyFilters={applyFilters}
+        />
+      {/* </KeyboardAvoidingView> */}
     </SafeAreaView>
   );
 };
@@ -766,19 +858,20 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  // filterButton: {
-  //   position: 'absolute',
-  //   top: 40,
-  //   left: 20,
-  //   width: 40,
-  //   height: 40,
-  //   borderRadius: 20,
-  //   backgroundColor: 'rgba(203, 18, 18, 0.5)',
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  // },
+  filterButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(203, 18, 18, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
   filterBadge: {
     position: 'absolute',
     top: 5,
@@ -818,22 +911,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 32,
   },
-infoRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 16,
-},
-time: {
-  fontSize: 14,
-  fontFamily: medium,
-  color: pallette.grey,
-},
-newsType: {
-  fontSize: 14,
-  fontFamily: medium,
-  color: pallette.primary,
-},
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  time: {
+    fontSize: 14,
+    fontFamily: medium,
+    color: pallette.grey,
+  },
+  newsType: {
+    fontSize: 14,
+    fontFamily: medium,
+    color: pallette.primary,
+  },
   fullContent: {
     fontSize: 15,
     fontFamily: regular,
@@ -1068,19 +1161,19 @@ newsType: {
     marginBottom: 12,
   },
   filterButtons: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  justifyContent: 'space-between',
-},
-filterButton: {
-  width: (SCREEN_WIDTH - 60) / 3, // 60 = total horizontal padding
-  paddingVertical: 12,
-  marginBottom: 12,
-  borderRadius: 8,
-  backgroundColor: pallette.lightgrey,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  filterButton: {
+    width: (SCREEN_WIDTH - 60) / 3,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    backgroundColor: pallette.lightgrey,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   filterButtonActive: {
     backgroundColor: pallette.primary,
   },
