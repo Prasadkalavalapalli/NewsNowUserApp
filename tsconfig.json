@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["jest"],
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "src/Screens/location/useCurrentLocation.js", "src/Screens/news/ShareNews.js", "src/Screens/news/NewsItem.js"],
   "exclude": ["**/node_modules", "**/Pods"]
 }
