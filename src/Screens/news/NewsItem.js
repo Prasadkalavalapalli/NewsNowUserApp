@@ -14,7 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import Video from 'react-native-video';
 import { pallette } from '../helpers/colors';
-import { regular, medium, bold } from '../helpers/fonts';
+import { regular, medium, bold, semibold } from '../helpers/fonts';
 import apiService from '../../Axios/Api';
 import { useAppContext } from '../../Store/contexts/app-context';
 import ErrorMessage from '../helpers/errormessage';
@@ -30,7 +30,8 @@ const NewsItem = React.memo(({
   onVideoPlayback,
   isVideoPlaying,
   currentNewsId,
-  showComments
+  showComments,
+  refreshActionBar
 }) => {
   const { user } = useAppContext();
   const userId = user?.userId || 2;
@@ -68,6 +69,11 @@ const NewsItem = React.memo(({
     loadActionData();
   }, [item.id]);
 
+   useEffect(() => {
+    if (refreshActionBar > 0) {
+      loadActionData(); // This reloads likes, comments, shares
+    }
+  }, [refreshActionBar, item.id]);
   // Load all action-related data
   const loadActionData = async () => {
     try {
@@ -580,7 +586,7 @@ const NewsItem = React.memo(({
       <View style={styles.contentContainer}>
         <Text style={styles.headline}>{item.headline}</Text>
         <View style={styles.infoRow}>
-          <Text style={styles.time}>{formatTime(item.publishedAt)}• {item.username} </Text>
+          <Text style={styles.time}>{formatTime(item.publishedAt)} •  {item.username} </Text>
           <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text>
         </View>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -659,11 +665,11 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   headline: {
-    fontSize: 18,
-    fontFamily: bold,
+    fontSize: 17,
+    fontFamily: semibold,
     color: pallette.black,
-    marginBottom: 8,
-    lineHeight: 32,
+    marginBottom: 4,
+    lineHeight: 26,
   },
   infoRow: {
     flexDirection: 'row',

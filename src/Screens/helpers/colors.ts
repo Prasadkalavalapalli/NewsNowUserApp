@@ -2,7 +2,7 @@ export const pallette = {
     black: '#000000',
     white: '#FFFFFF',
     grey: '#9E9E9E',
-    darkgrey: '#9E9E9E',
+    darkgrey: '#4e4b4b',
     lightgrey: '#FAFAFA',
     mediumgrey: '#D8D8D8',
     primary: '#D30101',

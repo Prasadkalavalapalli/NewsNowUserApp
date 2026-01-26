@@ -20,7 +20,8 @@ import ErrorMessage from '../helpers/errormessage';
 const CommentsPanel = React.memo(({ 
   showComments, 
   toggleComments, 
-  currentNewsId 
+  currentNewsId,
+   onCommentAdded
 }) => {
   const { user } = useAppContext();
   const userId = user?.userId || 2;
@@ -110,6 +111,11 @@ const CommentsPanel = React.memo(({
       };
       
       setComments(prev => [newCommentObj, ...prev]);
+        // ✅ Call the callback to notify NewsViewScreen
+      if (onCommentAdded) {
+        onCommentAdded();
+      }
+      
       
       // Refresh comments from server
       await loadComments();
