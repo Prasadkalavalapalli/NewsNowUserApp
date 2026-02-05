@@ -66,12 +66,15 @@ const Splash = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* Animated Logo */}
+      {/* Animated Logo in Circular Container */}
       <Animated.View style={[styles.logoContainer, logoTransform]}>
-        <Image
-          source={require('./../../Asserts/newsfulllogo.png')}
-          style={styles.logo}
-        />
+        <View style={styles.circleContainer}>
+          <Image
+            source={require('./../../Asserts/newsfulllogo.png')}
+            style={styles.logo}
+            resizeMode="cover"
+          />
+        </View>
       </Animated.View>
 
       {/* Tagline - appears after logo animation */}
@@ -89,17 +92,27 @@ export default Splash;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: pallette.primary,
+    backgroundColor: pallette.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoContainer: {
     alignItems: 'center',
   },
+  circleContainer: {
+    width: h * 0.25,  // Make it circular (same width and height)
+    height: h * 0.25, // Make it circular (same width and height)
+    borderRadius: (h * 0.25) / 2, // Half to make perfect circle
+    backgroundColor: pallette.white, // Optional: add background if needed
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden', // Important: makes logo stay within circle
+    borderWidth: 3, // Optional: border for visual effect
+    borderColor: '#990000' // Optional: border color
+  },
   logo: {
-    height: h * 0.25,
-    width: w * 0.7,
-    resizeMode: 'contain',
+    width: '100%',   // Fill the circle container
+    height: '100%',  // Fill the circle container
   },
   taglineContainer: {
     position: 'absolute',

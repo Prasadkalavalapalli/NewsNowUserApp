@@ -6,6 +6,7 @@ import AppNavigator from './src/Routes/auth-navigation';
 import { store } from './src/Store/redux/store';
 import { LocationProvider } from './src/Screens/location/LocationContext';
 
+
 const App = () => {
   return (
     <Provider store={store}>

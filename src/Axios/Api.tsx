@@ -285,10 +285,21 @@ getPublishedNews: async (filters = {}) => {
     let queryString = '';
     const params = [];
     
+    // Add coordinates if they exist (priority: coordinates come before district)
+    if (filters.latitude && filters.longitude) {
+      params.push(`latitude=${encodeURIComponent(filters.latitude)}`);
+      params.push(`longitude=${encodeURIComponent(filters.longitude)}`);
+    }
+    
+    // Add district only if coordinates are not provided
+    if (filters.district && !filters.latitude) {
+      params.push(`district=${encodeURIComponent(filters.district)}`);
+    }
+    
+    // Add other filters
     if (filters.category) params.push(`category=${encodeURIComponent(filters.category)}`);
     if (filters.newsType) params.push(`newsType=${encodeURIComponent(filters.newsType)}`);
     if (filters.priority) params.push(`priority=${encodeURIComponent(filters.priority)}`);
-    if (filters.district) params.push(`district=${encodeURIComponent(filters.district)}`);
     
     // Add pagination if needed (optional enhancement)
     if (filters.page) params.push(`page=${filters.page}`);
@@ -298,6 +309,7 @@ getPublishedNews: async (filters = {}) => {
       queryString = `?${params.join('&')}`;
     }
     
+    console.log('Query string:', queryString);
     const response = await apiClient.get(`/admin/news/published${queryString}`);
     return response;
   } catch (error) {
@@ -305,7 +317,17 @@ getPublishedNews: async (filters = {}) => {
     return error;
   }
 },
-
+ // Get all advertisements
+  getAdvertisements : async (coordinates) => {
+    try {
+      console.log(coordinates.lat)
+      const response = await apiClient.get(`/ads/feed?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}&local=true`);
+      return response;
+    } catch (error) {
+      console.error('Get advertisements error:', error);
+      throw error;
+    }
+  },
 }
 
 export default apiService;

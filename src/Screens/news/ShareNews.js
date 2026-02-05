@@ -24,7 +24,7 @@ const ShareNews = forwardRef(({ item, formatTime, onShared, onError }, ref) => {
 
         const shareOptions = {
           title: item.headline || 'News Article',
-          message: `${item.headline}\n\n${item.content?.slice(0, 300)}...\n\nRead more on NewsNow`,
+          message: ``,
           url: `file://${uri}`,
           type: 'image/png',
           failOnCancel: false,
@@ -57,7 +57,7 @@ const ShareNews = forwardRef(({ item, formatTime, onShared, onError }, ref) => {
 
         {/* Content */}
         <View style={styles.content}>
-          <Text style={styles.category}>{item.category?.toUpperCase() || 'NEWS'}</Text>
+          
           <Text style={styles.headline} numberOfLines={2}>{item.headline}</Text>
           <Text style={styles.snippet} numberOfLines={8}>{item.content}</Text>
         </View>
@@ -66,11 +66,12 @@ const ShareNews = forwardRef(({ item, formatTime, onShared, onError }, ref) => {
         <View style={styles.footer}>
           <View style={styles.authorTime}>
             <Text style={styles.user}>By {item.username}</Text>
+             <Text style={styles.user}> • {item.district}</Text>
             <Text style={styles.time}>{formatTime(item.publishedAt)}</Text>
           </View>
           <View style={styles.branding}>
             <Text style={styles.sharedBy}>Shared by NewsNow</Text>
-            <Text style={styles.website}>www.newsnow.com</Text>
+
             <Text style={styles.download}>Download the app for more</Text>
           </View>
         </View>
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     color: pallette.grey,
   },
   branding: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   sharedBy: {
     fontFamily: bold,
@@ -171,3 +172,4 @@ const styles = StyleSheet.create({
 });
 
 export default ShareNews;
+

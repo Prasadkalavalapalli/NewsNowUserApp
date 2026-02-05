@@ -193,6 +193,7 @@ const NewsItem = React.memo(({
     try {
       setLoadingShare(true);
       
+       await apiService.shareNews(item.id, userId);
       // Optimistic update
       setShareCount(prev => prev + 1);
       
@@ -571,6 +572,7 @@ const NewsItem = React.memo(({
           </>
         )}
         
+        {/* Filter Button - Top Left */}
         <TouchableOpacity 
           style={styles.filterButtonTop}
           onPress={onFilterPress}
@@ -578,17 +580,39 @@ const NewsItem = React.memo(({
           <Icon name="filter" size={20} color={pallette.white} />
         </TouchableOpacity>
 
+        {/* Category Badge - Top Right */}
         <View style={styles.categoryBadge}>
           <Text style={styles.categoryText}>{item.category}</Text>
         </View>
-      </View>
 
-      <View style={styles.contentContainer}>
-        <Text style={styles.headline}>{item.headline}</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.time}>{formatTime(item.publishedAt)} •  {item.username} </Text>
-          <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text>
+        {/* newsType Badge - Below Category */}
+        <View style={styles.newsTypeBadge}>
+          <Text style={styles.newsTypeBadgeText}>{item.newsType}</Text>
         </View>
+
+        {/* Priority Badge - Below newsType */}
+        <View style={styles.priorityBadge}>
+          <Text style={styles.priorityText}>{item.priority}</Text>
+        </View>
+
+        {/* Reporter/Time/Location Overlay - Bottom Left */}
+        <View style={styles.imageInfoOverlay}>
+          <View style={styles.locationTimeRow}>
+            <Icon name="clock" size={12} color={pallette.white} />
+            <Text style={styles.overlayText}> {formatTime(item.publishedAt)}</Text>
+            <Text style={styles.overlaySeparator}> • </Text>
+            <Icon name="user" size={12} color={pallette.white} />
+            <Text style={styles.overlayText}> {item.username || "Reporter"}</Text>
+            <Text style={styles.overlaySeparator}> • </Text>
+            <Icon name="location-dot" size={12} color={pallette.white} />
+            <Text style={styles.overlayText}> {item.district || "Hyderabad (D)"}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.contentContainer}>
+        {/* Headline - Only headline in content section */}
+        <Text style={styles.headline}>{item.headline}</Text>
+        
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.fullContent}>{item.content}</Text>
           <View style={styles.contentSpacer} />
@@ -656,6 +680,67 @@ const styles = StyleSheet.create({
     fontFamily: bold,
     textTransform: 'uppercase',
   },
+  newsTypeBadge: {
+    position: 'absolute',
+    top: 75, // Below category badge
+    right: 20,
+    backgroundColor: pallette.gold,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 1000,
+  },
+  newsTypeBadgeText: {
+    color: pallette.white,
+    fontSize: 12,
+    fontFamily: bold,
+    textTransform: 'uppercase',
+  },
+  priorityBadge: {
+    position: 'absolute',
+    top: 110, // Below newsType badge
+    right: 20,
+    backgroundColor:  pallette.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 1000,
+  },
+  priorityText: {
+    color: pallette.white,
+    fontSize: 12,
+    fontFamily: bold,
+    textTransform: 'uppercase',
+  },
+  // Reporter/Time/Location Overlay
+  imageInfoOverlay: {
+   position: 'absolute',
+  bottom: 20,
+  left: 20,
+  // backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 10,
+  zIndex: 1000,
+  minWidth: 150,
+  },
+  locationTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // flexWrap: 'wrap',
+  },
+  overlayText: {
+    color: pallette.white,
+    fontSize: 12,
+    fontFamily: medium,
+    marginLeft: 4,
+  },
+  overlaySeparator: {
+    color: pallette.white,
+    fontSize: 12,
+    marginHorizontal: 8,
+    opacity: 0.7,
+  },
   contentContainer: {
     flex: 1,
     backgroundColor: pallette.white,
@@ -668,7 +753,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: semibold,
     color: pallette.black,
-    marginBottom: 4,
+    marginBottom: 8,
     lineHeight: 26,
   },
   infoRow: {
